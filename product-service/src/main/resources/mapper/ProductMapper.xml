@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.product_service.mappers.ProductMapper">
+  <resultMap id="BaseResultMap" type="com.example.product_service.models.Product">
+
+    <result column="id" jdbcType="INTEGER" property="id" />
+    <result column="name_product" jdbcType="VARCHAR" property="nameProduct" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="price" jdbcType="NUMERIC" property="price" />
+    <result column="stock_quantity" jdbcType="INTEGER" property="stockQuantity" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+    <result column="category_id" jdbcType="INTEGER" property="categoryId" />
+  </resultMap>
+
+  <insert id="insert" parameterType="com.example.product_service.models.Product" useGeneratedKeys="true" keyProperty="id">
+  
+    <selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+      PostgreSQL
+    </selectKey>
+    insert into products (name_product, description, price, 
+      stock_quantity, created_at, updated_at, 
+      category_id)
+    values (#{nameProduct,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, #{price,jdbcType=NUMERIC}, 
+      #{stockQuantity,jdbcType=INTEGER}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, 
+      #{categoryId,jdbcType=INTEGER})
+  </insert>
+
+  <insert id="insertProduct" parameterType="com.example.product_service.models.Product" useGeneratedKeys="true" keyProperty="id">
+    insert into products 
+
+    (name_product
+    , description
+    , price
+    , stock_quantity
+    , category_id)
+
+    values
+    
+    (
+      #{nameProduct,jdbcType=VARCHAR}
+      , #{description,jdbcType=VARCHAR}
+      , #{price,jdbcType=NUMERIC}
+      , #{stockQuantity,jdbcType=INTEGER}
+      , #{categoryId,jdbcType=INTEGER}
+    )
+  </insert>
+
+  <update id="upDateProduct" parameterType="com.example.product_service.models.Product">
+    update products
+
+    set 
+      name_product = #{nameProduct,jdbcType=VARCHAR}
+      ,description = #{description,jdbcType=VARCHAR}
+      ,price = #{price,jdbcType=NUMERIC}
+      ,stock_quantity = #{stockQuantity,jdbcType=INTEGER}
+      ,category_id = #{categoryId,jdbcType=INTEGER}
+
+    where 
+    id = #{id,jdbcType=INTEGER}
+
+  </update>
+
+  <update id="decreaseStock" parameterType="java.lang.Integer">
+    UPDATE products
+
+    SET 
+    stock_quantity = stock_quantity - #{qty} 
+
+    WHERE 
+    id = #{productId} AND stock_quantity >= #{qty}
+  </update>
+
+  <update id="increaseStock" parameterType="java.lang.Integer">
+    UPDATE products
+
+    SET 
+    stock_quantity = stock_quantity + #{qty} 
+
+    WHERE 
+    id = #{productId} 
+  </update>
+
+  <select id="getProductById" resultType="com.example.product_service.dtos.response.ProductResponse" parameterType="java.lang.Integer">
+    select
+
+    id
+    , name_product AS nameProduct
+    , description
+    , price
+    , stock_quantity AS stockQuantity
+    , created_at AS createdAt
+    , updated_at AS updatedAt
+    , category_id AS categoryId
+
+    from products
+
+    where id = #{id,jdbcType=INTEGER}
+
+  </select>
+
+  <delete id="deleteProduct" parameterType="java.lang.Integer">
+    delete 
+    from products
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+
+  <select id="searchProduct" resultType="com.example.product_service.models.Product">
+    SELECT 
+      id
+    , name_product AS nameProduct
+    , description
+    , price
+    , stock_quantity AS stockQuantity
+    , created_at AS createdAt
+    , updated_at AS updatedAt
+    , category_id AS categoryId
+    FROM 
+    products
+     <where>
+        <if test="keyword != null and keyword != ''">
+            AND LOWER(name_product) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+        </if>
+    </where>
+    LIMIT #{limit} OFFSET #{offset}
+</select>
+
+<select id="countByName" resultType="long">
+    SELECT COUNT(1) FROM products
+    <where>
+        <if test="keyword != null and keyword != ''">
+            AND LOWER(name_product) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+        </if>
+    </where>
+</select>
+
+<select id="findAllByPrice" resultType="com.example.product_service.models.Product" >
+    SELECT 
+      id
+    , name_product AS nameProduct
+    , description
+    , price
+    , stock_quantity AS stockQuantity
+    , created_at AS createdAt
+    , updated_at AS updatedAt
+    , category_id AS categoryId
+    FROM 
+    products
+
+    ORDER BY price
+    <choose>
+        <when test="sort == 'DESC'">DESC</when>
+        <otherwise>ASC</otherwise>
+    </choose>
+    LIMIT #{limit} OFFSET #{offset}
+</select>
+
+<select id="countAll" resultType="long">
+    SELECT COUNT(1) FROM products
+</select>
+
+  <insert id="insertSelective" parameterType="com.example.product_service.models.Product">
+    <selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+      PostgreSQL
+    </selectKey>
+    insert into products
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="nameProduct != null">
+        name_product,
+      </if>
+      <if test="description != null">
+        description,
+      </if>
+      <if test="price != null">
+        price,
+      </if>
+      <if test="stockQuantity != null">
+        stock_quantity,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="updatedAt != null">
+        updated_at,
+      </if>
+      <if test="categoryId != null">
+        category_id,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="nameProduct != null">
+        #{nameProduct,jdbcType=VARCHAR},
+      </if>
+      <if test="description != null">
+        #{description,jdbcType=VARCHAR},
+      </if>
+      <if test="price != null">
+        #{price,jdbcType=NUMERIC},
+      </if>
+      <if test="stockQuantity != null">
+        #{stockQuantity,jdbcType=INTEGER},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="categoryId != null">
+        #{categoryId,jdbcType=INTEGER},
+      </if>
+    </trim>
+  </insert>
+
+
+</mapper>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration
+        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+        "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+
+<generatorConfiguration>
+    <context id="PostgreSQLContext" targetRuntime="MyBatis3">
+        <!-- Kết nối DB -->
+        <jdbcConnection driverClass="org.postgresql.Driver"
+                        connectionURL="jdbc:postgresql://localhost:5433/productdb"
+                        userId="postgres"
+                        password="123456" />
+
+        <!-- Sinh Model -->
+        <javaModelGenerator targetPackage="com.example.product_service.models"
+                            targetProject="src/main/java">
+            <property name="trimStrings" value="false"/>
+        </javaModelGenerator>
+
+        <!-- Sinh XML Mapper -->
+        <sqlMapGenerator targetPackage="mapper" 
+                         targetProject="src/main/resources">
+            <property name="overwrite" value="true"/>
+        </sqlMapGenerator>
+
+        <!-- Sinh Mapper Interface -->
+        <javaClientGenerator type="XMLMAPPER"
+                             targetPackage="com.example.product_service.mappers" 
+                             targetProject="src/main/java">
+        </javaClientGenerator>
+        
+        <!-- Chọn bảng -->
+        <table tableName="products" domainObjectName="Product" 
+            enableCountByExample="false"
+            enableDeleteByExample="false"
+            enableSelectByExample="false"
+            enableUpdateByExample="false">
+        <generatedKey column="id" sqlStatement="PostgreSQL" identity="true"/>
+        </table>
+
+    </context>
+</generatorConfiguration>

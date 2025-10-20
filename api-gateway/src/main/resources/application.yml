@@ -1,0 +1,40 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      default-filters:
+        - RemoveRequestHeader=Cookie
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+      routes:
+      # Auth trực tiếp tới auth-service (permitAll)
+      - id: auth-service
+        uri: lb://auth-service
+        predicates:
+          - Path=/api/v1/auth/**
+        filters:
+          - StripPrefix=0
+      # MỌI API nghiệp vụ còn lại vào client-server
+      - id: client-server
+        uri: lb://client-server
+        predicates:
+          - Path=/api/v1/**
+        filters:
+          - StripPrefix=0
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    hostname: localhost
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+    

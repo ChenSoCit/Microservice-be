@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.user_service.mappers.UserMapper">
+
+    <insert id="createUser" parameterType="com.example.user_service.models.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (
+            first_name,
+            last_name,
+            email,
+            date_of_birth,
+            gender,
+            address,
+            phone,
+            role_id,
+            password,
+            user_name,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{firstName},
+            #{lastName},
+            #{email},
+            #{dateOfBirth},
+            #{gender},
+            #{address},
+            #{phone},
+            #{roleId},
+            #{password},
+            #{userName},
+            NOW(),
+            NOW()
+        )
+    </insert>
+
+    <select id="getUserById" parameterType="int" resultType="com.example.user_service.dtos.response.UserResponse">
+        SELECT
+            id,
+            first_name AS firstName,
+            last_name AS lastName,
+            email,
+            date_of_birth AS dateOfBirth,
+            gender,
+            address,
+            phone,
+            role_id AS roleId,
+            created_at AS createdAt,
+            updated_at AS updatedAt,
+            password,
+            user_name AS userName
+        FROM users
+        WHERE id = #{id}
+    </select>
+
+    <select id="getByUserName" resultType="com.example.user_service.dtos.response.UserLoginResponse">
+        SELECT
+            id,
+            first_name AS firstName,
+            last_name AS lastName,
+            email,
+            date_of_birth AS dateOfBirth,
+            gender,
+            address,
+            phone,
+            role_id AS roleId,
+            password AS password,
+            user_name AS userName
+        FROM users 
+        WHERE user_name = #{userName}
+    </select>
+
+    <delete id="deleteUser" parameterType="int">
+        DELETE FROM users WHERE id = #{id}
+    </delete>
+
+    <update id="updateUser" parameterType="com.example.user_service.models.User">
+        UPDATE users
+        SET 
+            first_name = #{firstName},
+            last_name = #{lastName},
+            email = #{email},
+            date_of_birth = #{dateOfBirth},
+            gender = #{gender},
+            address = #{address},
+            phone = #{phone},
+            role_id = #{roleId},
+            password = #{password},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+    
+</mapper>

@@ -81,7 +81,7 @@
             date_of_birth = #{dateOfBirth},
             gender = #{gender},
             address = #{address},
-            phone = #{phone},
+            phone = #{phoneNumber},
             role_id = #{roleId},
             password = #{password},
             updated_at = NOW()

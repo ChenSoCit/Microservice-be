@@ -1,15 +1,21 @@
+version: "3.9"
+
 services:
-  postgres:
+  postgres-db:
     image: postgres:17
     container_name: postgres-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123456
     ports:
-      - "5433:5432"
+      - "5433:5432"   # Truy cập từ host: localhost:5433
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - micro-net
 
@@ -29,7 +35,8 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     depends_on:
-      - discovery-server
+      discovery-server:
+        condition: service_started
     networks:
       - micro-net
 
@@ -39,13 +46,15 @@ services:
     ports:
       - "8082:8082"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/userdb
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/userdb
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     depends_on:
-      - postgres
-      - discovery-server
+      postgres-db:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
     networks:
       - micro-net
 
@@ -55,30 +64,33 @@ services:
     ports:
       - "8081:8081"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orderdb
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/orderdb
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     depends_on:
-      - postgres
-      - discovery-server
+      postgres-db:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
     networks:
       - micro-net
 
   product-service:
     build: ./product-service
     container_name: product-service
-
     ports:
       - "8084:8084"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/productdb
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/productdb
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     depends_on:
-      - postgres
-      - discovery-server
+      postgres-db:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
     networks:
       - micro-net
 
@@ -90,7 +102,8 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     depends_on:
-      - discovery-server
+      discovery-server:
+        condition: service_started
     networks:
       - micro-net
 
@@ -102,8 +115,14 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     depends_on:
-      - api-gateway
-      - discovery-server
+      discovery-server:
+        condition: service_started
+      user-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      product-service:
+        condition: service_started
     networks:
       - micro-net
 

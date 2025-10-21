@@ -19,7 +19,6 @@ import com.example.client_server.dto.OrderDetailResponse;
 import com.example.client_server.dto.OrderRequest;
 import com.example.client_server.dto.OrderResponse;
 
-
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -40,8 +39,8 @@ public class OrderProxyController {
         return orderClient.getOrdersByUserId(userId);
     }
 
-    @PostMapping
-    @PreAuthorize("hasAnyRole('USER')")
+    @PostMapping("")
+    @PreAuthorize("hasRole('USER')")
     public ApiResponse<String> createOrder(@RequestBody OrderRequest request){
         return orderClient.createOrder(request);
     }

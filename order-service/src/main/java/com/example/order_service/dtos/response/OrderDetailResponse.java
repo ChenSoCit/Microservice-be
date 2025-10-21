@@ -15,6 +15,7 @@ public class OrderDetailResponse {
     @JsonProperty("order_date")
     private LocalDateTime orderDate;
 
+    @JsonProperty("status")
     private String status;
 
     @JsonProperty("total_money")

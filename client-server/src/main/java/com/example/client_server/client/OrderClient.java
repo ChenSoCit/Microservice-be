@@ -27,7 +27,7 @@ public interface OrderClient {
     @GetMapping("/user/{userId}")
     ApiResponse<List<OrderResponse>> getOrdersByUserId(@PathVariable("userId") long userId);
 
-    @PostMapping
+    @PostMapping("")
     ApiResponse<String> createOrder(@RequestBody OrderRequest request);
 
     @PutMapping("/{id}/status")

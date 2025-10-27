@@ -13,7 +13,6 @@ import com.example.auth_service.dtos.request.LoginRequest;
 import com.example.auth_service.dtos.request.RefreshTokenRequest;
 import com.example.auth_service.dtos.request.UserRegisterRequest;
 import com.example.auth_service.dtos.response.JwtTokenResponse;
-import com.example.auth_service.dtos.response.UserLoginResponse;
 import com.example.auth_service.dtos.response.UserResponse;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.service.AuthService;
@@ -31,9 +30,9 @@ public class AuthServiceImpl implements AuthService{
 
     @Override
     public JwtTokenResponse login(LoginRequest request) {
-        UserLoginResponse user = userClient.getByUserName(request.getUserName());
+        UserResponse user = userClient.getByUserName(request.getUserName());
 
-        if(user == null || !passwordEncoder.matches(request.getPassword(), user.getPassWord())){
+        if(user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())){
             throw new com.example.auth_service.exception.BadRequestException("Invalid username or password");
         }
 
@@ -74,7 +73,7 @@ public class AuthServiceImpl implements AuthService{
             .userName(request.getUserName())
         .build();
 
-        
+
         UserResponse response = userClient.create(req);
         return response;
     }
@@ -89,7 +88,7 @@ public class AuthServiceImpl implements AuthService{
 
         String username = jwtTokenUtil.getUsernameFromToken(Token);
         log.info("username: {}", username);
-        UserLoginResponse user = userClient.getByUserName(username);
+        UserResponse user = userClient.getByUserName(username);
         
 
         if(user == null){

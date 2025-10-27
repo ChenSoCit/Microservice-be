@@ -17,7 +17,6 @@ import com.example.auth_service.components.JwtTokenUtil;
 import com.example.auth_service.dtos.request.LoginRequest;
 import com.example.auth_service.dtos.request.RefreshTokenRequest;
 import com.example.auth_service.dtos.request.UserRegisterRequest;
-import com.example.auth_service.dtos.response.ApiResponse;
 import com.example.auth_service.dtos.response.JwtTokenResponse;
 import com.example.auth_service.dtos.response.UserResponse;
 import com.example.auth_service.dtos.response.VerifyTokenResponse;
@@ -33,21 +32,16 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j(topic = "AUTH-CONTROLLER")
 @RequiredArgsConstructor
 public class AuthController {
+    
     private final JwtTokenUtil jwtTokenUtil;
     private final AuthService authService;
 
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody UserRegisterRequest request) {
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody UserRegisterRequest request) {
         UserResponse user = authService.register(request);
 
-        ApiResponse<UserResponse> response = ApiResponse.<UserResponse>builder()
-            .code(HttpStatus.OK.value())
-            .message("creating user successfully")
-            .data(user)
-            .build();
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(HttpStatusCode.valueOf(201)).body(user);
     }
 
     @PostMapping("/login")

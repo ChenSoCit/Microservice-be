@@ -33,60 +33,46 @@ public class ProductController {
     
 
     @PostMapping("/insert")
-    public ResponseEntity<ApiResponse<String>> insertProduct(@Valid @RequestBody ProductRequest request){
+    public ResponseEntity<String> insertProduct(@Valid @RequestBody ProductRequest request){
         log.info("Request to insert product");
         
         productService.insertProduct(request);
-        ApiResponse<String> response = ApiResponse.<String>builder()
-            .code(HttpStatus.OK.value())
-            .message("create product")
-            .data("Create product successfully")
-        .build();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok("Create product successfully");
     }
 
+
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductResponse>> getProductById(@PathVariable("id") Integer id) {
+    public ResponseEntity<ProductResponse> getProductById(@PathVariable("id") int id) {
         log.info("Request to get product by ID: {}", id);
 
         ProductResponse product = productService.getProductById(id);
-        ApiResponse<ProductResponse> response = ApiResponse.<ProductResponse>builder()
-        .code(HttpStatus.OK.value())
-        .message("Get prodcut detail by id")
-        .data(product)
-        .build();
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(product);
     }
     
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductResponse>> upDateProduct(@PathVariable("id") Integer id, @RequestBody ProductRequest request) {
+    public ResponseEntity<ProductResponse> upDateProduct(@PathVariable("id") Integer id, @RequestBody ProductRequest request) {
         log.info("Request to update product");
 
         ProductResponse product = productService.upDateProduct(id, request);
-        ApiResponse<ProductResponse> response = ApiResponse.<ProductResponse>builder()
-            .code(HttpStatus.OK.value())
-            .message("Get prodcut detail by id")
-            .data(product)
-            .build();
+        return ResponseEntity.ok(product);
+    }
 
-        return ResponseEntity.ok(response);
+    @PutMapping("/stock/decrease")
+    public ResponseEntity<String> updateStockDecrease(@RequestParam int productId
+            , @RequestParam int quantity){
+
+        productService.decreaseStockProduct(productId, quantity);
+
+        return ResponseEntity.ok("Decrease stock successfully");
     }
 
    
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Integer>> deleteProduct(@PathVariable("id") Integer id
-                                            ) {
+    public ResponseEntity<Integer> deleteProduct(@PathVariable("id") Integer id) {
 
     int deletedCount = productService.deleteProduct(id);
-     ApiResponse<Integer> response = ApiResponse.<Integer>builder()
-            .code(HttpStatus.OK.value())
-            .message("del prodcut detail by id")
-            .data(deletedCount)
-            .build();
-    return ResponseEntity.ok(response);
-
+    return ResponseEntity.ok(deletedCount);
     }
 
     @GetMapping("/search")
@@ -94,10 +80,11 @@ public class ProductController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size){
-            
+
         ProductPageResponse pageResponse = productService.searchProduct( keyword, page, size);
         return ResponseEntity.ok(pageResponse);
     }
+
 
     @GetMapping("/sort")
     public ResponseEntity<ProductPageResponse> findByPrice(

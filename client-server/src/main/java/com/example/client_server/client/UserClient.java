@@ -8,20 +8,23 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import com.example.client_server.dto.ApiResponse;
-import com.example.client_server.dto.UserRequest;
-import com.example.client_server.dto.UserResponse;
-import com.example.client_server.dto.UserWithOrderResponse;
+import com.example.client_server.dto.request.UserRequest;
+import com.example.client_server.dto.response.UserResponse;
+import com.example.client_server.dto.response.UserWithOrderResponse;
 
 @FeignClient(name = "user-service", path = "/api/v1/users")
 public interface UserClient {
     @GetMapping("/{id}")
-    ApiResponse<UserResponse> getUser(@PathVariable("id") long id);
+    UserResponse getUser(@PathVariable("id") int id);
+
+    @GetMapping("/by-username/{username}")
+    UserResponse findByName(@PathVariable("username") String username);
 
     @GetMapping("/{userId}/orders")
     ApiResponse<UserWithOrderResponse> getUserOrders(@PathVariable("userId") long userId);
 
     @DeleteMapping("/{id}")
-    ApiResponse<String> deleteUser(@PathVariable("id") long id);
+    String deleteUser(@PathVariable("id") long id);
 
     @PutMapping("/{id}")
     ApiResponse<UserResponse> updateUser(@PathVariable("id") long id, @RequestBody UserRequest request);

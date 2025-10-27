@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import com.example.order_service.dtos.response.CntOrderResponse;
-import com.example.order_service.dtos.response.OrderResponse;
+import com.example.order_service.dtos.response.OrderDetailResponse;
 import com.example.order_service.models.Order;
 
 import feign.Param;
@@ -14,7 +14,9 @@ public interface OrderMapper {
 
     Order getOrderById(int id);
 
-    List<OrderResponse> getOrderByUserId(int userId);
+    Order getOrderByUser(int userId);
+
+    List<Order> getAllOrderByUser(int userId);
 
     CntOrderResponse statisOrder(int userId);
 

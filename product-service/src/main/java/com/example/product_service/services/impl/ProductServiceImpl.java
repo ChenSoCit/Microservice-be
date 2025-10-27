@@ -48,12 +48,9 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductResponse getProductById(Integer id) {
+    public ProductResponse getProductById(int id) {
         log.info("Getting product by ID: {}", id);
-
-        ProductResponse product = productMapper.getProductById(id);
-
-        return product;
+        return productMapper.getProductById(id);
     }
 
     @Override
@@ -87,14 +84,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public void decreaseStockProduct(Integer productId, Integer quantity) {
-        ProductResponse product = productMapper.getProductById(productId);
-        int currentStock = product.getStockQuantity();
-
-        if (currentStock < quantity) {
-            throw new IllegalArgumentException("Not enough stock for product " + productId);
-        }
-
+    public void decreaseStockProduct(int productId, int quantity) {
         productMapper.decreaseStock(productId, quantity);
     }
 

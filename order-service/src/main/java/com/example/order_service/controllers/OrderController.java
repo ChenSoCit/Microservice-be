@@ -2,24 +2,19 @@ package com.example.order_service.controllers;
 
 import java.util.List;
 
+import com.example.order_service.commons.OrderStatus;
+import com.example.order_service.mappers.OrderDetailMapper;
+import com.example.order_service.models.Order;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.example.order_service.dtos.request.OrderRequest;
 import com.example.order_service.dtos.response.ApiResponse;
 import com.example.order_service.dtos.response.CntOrderResponse;
+import com.example.order_service.dtos.response.OrderItemResponse;
 import com.example.order_service.dtos.response.OrderDetailResponse;
-import com.example.order_service.dtos.response.OrderResponse;
 import com.example.order_service.services.OrderService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -31,55 +26,36 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
-    @PostMapping("")
-    public ResponseEntity<ApiResponse<String>> createOrder(@RequestBody OrderRequest request) {
-        log.debug("REST request to save Order : {}", request);
-        String rows = orderService.createOrder(request);
+    @Autowired
+    private OrderDetailMapper orderDetailMapper;
 
-        ApiResponse<String> response = ApiResponse.<String>builder()
-            .code(HttpStatus.OK.value())
-            .message("create order")
-            .data(rows)
-            .build();
-        return  ResponseEntity.ok(response);
+    @PostMapping("")
+    public ResponseEntity<OrderDetailResponse> createOrder(@RequestBody OrderRequest request) {
+        log.debug("REST request to save Order : {}", request);
+        OrderDetailResponse orderResponse = orderService.createOrder(request);
+
+        return ResponseEntity.ok(orderResponse);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<OrderDetailResponse>> getOrderById(@PathVariable("id") int id) {
+    public ResponseEntity<OrderDetailResponse> getOrderById(@PathVariable("id") int id) {
         log.debug("REST request to get Order by id : {}", id);
-
-        ApiResponse<OrderDetailResponse> response = ApiResponse.<OrderDetailResponse>builder()
-            .code(HttpStatus.OK.value())
-            .message("Get order detail by id")
-            .data(orderService.getOrderById(id))
-            .build();
-        return ResponseEntity.ok(response);
+        OrderDetailResponse orderResponse = orderService.getOrderById(id);
+        return ResponseEntity.ok(orderResponse);
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrderByUserId(@PathVariable("userId") int userId) {
+    public ResponseEntity<List<OrderDetailResponse>> getOrderByUserId(@PathVariable("userId") int userId) {
         log.debug("REST request to get Order by userId : {}", userId);
-        List<OrderResponse> getOrder = orderService.getOrderByUserId(userId);
-
-        ApiResponse<List<OrderResponse>> response = ApiResponse.<List<OrderResponse>>builder()
-            .code(HttpStatus.OK.value())
-            .message("get order by user id")
-            .data(getOrder)
-            .build();
-        return ResponseEntity.ok(response);
+        List<OrderDetailResponse> getOrder = orderService.getOrderByUserId(userId);
+        return ResponseEntity.ok(getOrder);
     }
 
     @GetMapping("/statistics/by-user/{userId}")
-    public ResponseEntity<ApiResponse<CntOrderResponse>> countOrders(@PathVariable("userId") int userId) {
+    public ResponseEntity<CntOrderResponse> countOrders(@PathVariable("userId") int userId) {
         log.debug("REST request to count Orders");
         CntOrderResponse result = orderService.statisOrder(userId);
-
-        ApiResponse<CntOrderResponse> response = ApiResponse.<CntOrderResponse>builder()
-            .code(HttpStatus.OK.value())
-            .message("thong ke so luong don hang")
-            .data(result)
-            .build();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(result);
     }
 
     @DeleteMapping("/user/{userId}")
@@ -109,18 +85,37 @@ public class OrderController {
     } 
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<OrderResponse>> updateOrder(@PathVariable("id") int id
+    public ResponseEntity<Order> updateOrder(@PathVariable("id") int id
                                                     , @RequestBody OrderRequest request){
-        OrderResponse order = orderService.updateOrder(id, request);    
-        
-        ApiResponse<OrderResponse> response = ApiResponse.<OrderResponse>builder()
-            .code(HttpStatus.OK.value())
-            .message("update order by id")
-            .data(order)
-            .build();
+        Order order = orderService.updateOrder(id, request);
 
+        return ResponseEntity.ok(order);
+
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<OrderDetailResponse> updateStatus (@PathVariable("id") int id
+                                                        ,@RequestParam String status){
+        // check order
+        Order order = orderService.updateStatus(id, status);
+
+        // call list order items
+        List<OrderItemResponse> orderItems = orderDetailMapper.getOrderItemsByOrderId(id);
+
+        OrderDetailResponse response = OrderDetailResponse.builder()
+                .id(order.getId())
+                .userId(order.getUserId())
+                .fullName(order.getFullName())
+                .phone(order.getPhone())
+                .orderDate(order.getOrderDate())
+                .shippingAddress(order.getShippingAddress())
+                .paymentMethod(order.getPaymentMethod())
+                .status(order.getStatus())
+                .note(order.getNote())
+                .totalAmount(order.getTotalAmount())
+                .orderItems(orderItems)
+                .build();
         return ResponseEntity.ok(response);
-
     }
 
 }

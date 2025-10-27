@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.example.client_server.dto.ErrorResponse;
+import com.example.client_server.dto.response.ErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import feign.FeignException;

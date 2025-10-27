@@ -63,6 +63,8 @@ public class UserServiceImpl implements UserService{
                 .address(user.getAddress())
                 .phone(user.getPhone())
                 .roleId(user.getRoleId())
+                .userName(user.getUserName())
+                .password(user.getPassword())
                 .build();
     }
 
@@ -75,10 +77,6 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public UserResponse updateUser(UserRequest request, Integer userId) {
-        UserResponse extingUser = userMapper.getUserById(userId);
-        if(extingUser == null){
-            throw new ResourceNotFoundException("User not found with id "+userId);
-        }
 
         User user = User.builder()
             .id(userId)
@@ -128,11 +126,6 @@ public class UserServiceImpl implements UserService{
     @Transactional
     public int deleteUser(int userId) {
         log.info("Deleting user with ID: {}", userId);
-
-        UserResponse user = userMapper.getUserById(userId);
-        if(user == null){
-            throw new ResourceNotFoundException("User not found id "+userId);
-        }
         int deleteUser = userMapper.deleteUser(userId);
         if(deleteUser != 1){
             throw new BadRequestException("Delete user to database fail");
@@ -163,8 +156,8 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
-    public UserLoginResponse getByUserName(String username) {
-        UserLoginResponse response = userMapper.getByUserName(username);
+    public UserResponse getByUserName(String username) {
+        UserResponse response = userMapper.getByUserName(username);
         return response;
     }
 }

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
@@ -15,7 +14,7 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.example.client_server.client.AuthClient;
-import com.example.client_server.dto.VerifyTokenResponse;
+import com.example.client_server.dto.response.VerifyTokenResponse;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -33,6 +32,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
     private static final Set<EndpointMethodPattern> BYPASS_PATTERNS = Set.of(
         new EndpointMethodPattern("/api/v1/auth/register", "POST"),
         new EndpointMethodPattern("/api/v1/auth/login", "POST"),
+        new EndpointMethodPattern("/api/v1/auth/verify", "GET"),
         new EndpointMethodPattern("/api/v1/products", "GET"),
         new EndpointMethodPattern("/api/v1/products/*", "GET") 
     );
@@ -70,14 +70,14 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 
     String token = request.getHeader("Authorization");
     if (token == null || !token.startsWith("Bearer ")) {
-        throw new org.springframework.security.core.AuthenticationException("Missing or invalid Authorization header") {};
+        throw new AuthenticationException("Missing or invalid Authorization header") {};
     }
 
     token = token.substring(7);
     try {
         VerifyTokenResponse verify = authClient.verifyToken(token);
         if (verify == null || !verify.isValid()) {
-            throw new org.springframework.security.core.AuthenticationException("Token is invalid") {};
+            throw new AuthenticationException("Token is invalid") {};
         }
 
         request.setAttribute("X-Username", verify.getUsername());

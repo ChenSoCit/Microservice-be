@@ -12,7 +12,7 @@ public interface ProductMapper {
     
     int insertProduct(Product row);
 
-    ProductResponse getProductById(Integer id);
+    ProductResponse getProductById(int id);
 
     int upDateProduct(Product row);
 
@@ -20,9 +20,9 @@ public interface ProductMapper {
 
     int insertSelective(Product row);
 
-    int decreaseStock(@Param("productId") Integer productId, @Param("qty") int qty);
+    int decreaseStock(@Param("productId") int productId, @Param("qty") int qty);
 
-    int increaseStock(@Param("productId") Integer productId, @Param("qty") int qty);
+    int increaseStock(@Param("productId") int productId, @Param("qty") int qty);
 
     List<ProductResponse> searchProduct(@Param("keyword") String keyword, @Param("limit") int limit, @Param("offset") int offset);
 

@@ -10,9 +10,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.example.user_service.dtos.request.UserRequest;
 
-import com.example.user_service.dtos.response.UserLoginResponse;
+import com.example.user_service.dtos.request.UserRequest;
 import com.example.user_service.dtos.response.UserResponse;
 import com.example.user_service.services.UserService;
 
@@ -33,11 +32,11 @@ public class UserInternalController {
         return new ResponseEntity<>(newUser, HttpStatus.CREATED);
     }
 
-    @GetMapping("/by-username/{username}")
-    public ResponseEntity<UserLoginResponse> getByUserName(@PathVariable("username") String username){
-        UserLoginResponse user = userService.getByUserName(username);
-        return ResponseEntity.status(HttpStatusCode.valueOf(200)).body(user);
-    }
+    // @GetMapping("/by-username/{username}")
+    // public ResponseEntity<UserLoginResponse> getByUserName(@PathVariable("username") String username){
+    //     UserLoginResponse user = userService.getByUserName(username);
+    //     return ResponseEntity.status(HttpStatusCode.valueOf(200)).body(user);
+    // }
 
     @GetMapping("/check-role/{userId}")
     public ResponseEntity<String> checkRole(@PathVariable int userId) {

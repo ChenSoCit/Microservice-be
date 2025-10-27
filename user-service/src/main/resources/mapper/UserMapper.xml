@@ -43,15 +43,13 @@
             address,
             phone,
             role_id AS roleId,
-            created_at AS createdAt,
-            updated_at AS updatedAt,
             password,
             user_name AS userName
         FROM users
         WHERE id = #{id}
     </select>
 
-    <select id="getByUserName" resultType="com.example.user_service.dtos.response.UserLoginResponse">
+    <select id="getByUserName" resultType="com.example.user_service.dtos.response.UserResponse">
         SELECT
             id,
             first_name AS firstName,

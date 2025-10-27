@@ -2,18 +2,19 @@ package com.example.order_service.services;
 
 import java.math.BigDecimal;
 import java.util.List;
-import com.example.order_service.dtos.response.OrderDetailResponse;
+import com.example.order_service.dtos.response.OrderItemResponse;
 import com.example.order_service.commons.OrderStatus;
 import com.example.order_service.dtos.request.OrderRequest;
 import com.example.order_service.dtos.response.CntOrderResponse;
-import com.example.order_service.dtos.response.OrderResponse;
+import com.example.order_service.dtos.response.OrderDetailResponse;
+import com.example.order_service.models.Order;
 
 public interface OrderService {
-    String createOrder(OrderRequest request);
+    OrderDetailResponse createOrder(OrderRequest request);
 
     OrderDetailResponse getOrderById(int id);
 
-    List<OrderResponse> getOrderByUserId(int userId);
+    List<OrderDetailResponse> getOrderByUserId(int userId);
 
     CntOrderResponse statisOrder(int userId);
 
@@ -25,7 +26,7 @@ public interface OrderService {
 
     String decreaseTotalMoney(Integer orderId, BigDecimal totalMoney);
 
-    OrderResponse updateOrder(Integer id, OrderRequest req);
+    Order updateOrder(Integer id, OrderRequest req);
 
-    OrderResponse updateStatus(Integer id, OrderStatus status);
+    Order updateStatus(Integer id, String status);
 }

@@ -1,20 +1,29 @@
 package com.example.order_service.controllers;
 
+import java.time.LocalDate;
 import java.util.List;
 
-import com.example.order_service.commons.OrderStatus;
-import com.example.order_service.mappers.OrderDetailMapper;
-import com.example.order_service.models.Order;
+import com.example.order_service.dtos.request.OrderStatisticsRequest;
+import com.example.order_service.dtos.response.*;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.example.order_service.dtos.request.OrderRequest;
-import com.example.order_service.dtos.response.ApiResponse;
-import com.example.order_service.dtos.response.CntOrderResponse;
-import com.example.order_service.dtos.response.OrderItemResponse;
-import com.example.order_service.dtos.response.OrderDetailResponse;
+import com.example.order_service.mappers.OrderDetailMapper;
+import com.example.order_service.models.Order;
 import com.example.order_service.services.OrderService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -22,12 +31,14 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @Slf4j(topic = "ORDER-CONTROLLER")
 @RequestMapping("/api/v1/orders")
+@Validated
 public class OrderController {
     @Autowired
     private OrderService orderService;
 
     @Autowired
     private OrderDetailMapper orderDetailMapper;
+
 
     @PostMapping("")
     public ResponseEntity<OrderDetailResponse> createOrder(@RequestBody OrderRequest request) {
@@ -118,4 +129,37 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/week/statics")
+    public ResponseEntity<OrderStatisticsResponse> getStatisticsWeekly (
+            @RequestParam String type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)LocalDate endDate,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year){
+        OrderStatisticsRequest request = OrderStatisticsRequest.builder()
+                .month(month)
+                .year(year)
+                .build();
+        if(startDate != null && endDate != null){
+            request.setStartDate(startDate);
+            request.setEndDate(endDate);
+        }
+        return ResponseEntity.ok(orderService.getWeeklyStatics(request));
+    }
+
+    @GetMapping("/month/statics")
+    public ResponseEntity<OrderStatisticsResponse> getStatisticMonthly(@RequestParam(required = false) Integer month,
+                                                                   @RequestParam(required = false) Integer year){
+        return ResponseEntity.ok(orderService.getMonthlyStatics(month, year));
+    }
+
+    @PostMapping("/statics")
+    public ResponseEntity<OrderStatisticsResponse> getStatics(@Valid @RequestBody OrderStatisticsRequest request){
+        if(request.getType().toUpperCase().equals("W")){
+            return ResponseEntity.ok(orderService.getWeeklyStatics(request));
+        }else if(request.getType().toUpperCase().equals("M")){
+            return ResponseEntity.ok(orderService.getMonthlyStatics(request));
+        }else
+           return null;
+    }
 }

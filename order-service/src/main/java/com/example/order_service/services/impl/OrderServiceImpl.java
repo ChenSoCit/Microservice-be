@@ -1,22 +1,25 @@
 package com.example.order_service.services.impl;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
+import com.example.order_service.dtos.request.OrderStatisticsRequest;
+import com.example.order_service.dtos.response.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.order_service.clients.UserClient;
 import com.example.order_service.commons.OrderStatus;
 import com.example.order_service.dtos.request.OrderRequest;
-import com.example.order_service.dtos.response.CntOrderResponse;
-import com.example.order_service.dtos.response.OrderDetailResponse;
-import com.example.order_service.dtos.response.OrderItemResponse;
-import com.example.order_service.dtos.response.UserResponse;
 import com.example.order_service.mappers.OrderDetailMapper;
 import com.example.order_service.mappers.OrderMapper;
 import com.example.order_service.models.Order;
@@ -283,11 +286,155 @@ public class OrderServiceImpl implements OrderService {
             log.error("Order not found with id: {}", id);
             throw new IllegalArgumentException("Order not found");
         }
+        if (status == null || status.isBlank()) {
+            throw new IllegalArgumentException("Status cannot be null or empty");
+        }
 
-        int rows = orderMapper.updateStatus(id, status);
+        // Chuyển in hoa
+        String st = status.toUpperCase();
+
+        // Kiểm tra giá trị hợp lệ
+        if (!st.equals("PENDING") &&
+                !st.equals("SHIPPED") &&
+                !st.equals("DELIVERED") &&
+                !st.equals("CANCELLED")) {
+            throw new IllegalArgumentException("Invalid status: " + status);
+        }
+
+        // Cập nhật
+        int rows = orderMapper.updateStatus(id, st);
         log.info("rows affected = {}", rows);
 
         // Lấy lại order đã cập nhật
         return orderMapper.getOrderById(id);
+    }
+
+    @Override
+    public OrderDetailResponse cancelOrder(int orderId, String reason) {
+        log.info("request to cancel order:{} with reason:{}", orderId, reason);
+        // kt order ton tai
+        Order order = orderMapper.getOrderById(orderId);
+        if(order == null){
+            log.error("Order not found with id: {}", orderId);
+            throw new IllegalArgumentException("Order not found");
+        }
+
+        // Kiểm tra trạng thái đơn hàng
+        if (!order.getStatus().equals(OrderStatus.PENDING)) {
+            throw new IllegalArgumentException("Cannot cancel order with status: " + order.getStatus());
+        }
+
+        // Cập nhật trạng thái đơn hàng
+        int rows = orderMapper.updateStatus(orderId, OrderStatus.CANCELLED.name());
+        log.info("rows affected = {}", rows);
+
+        // Trả về thông tin đơn hàng đã hủy
+        return getOrderById(orderId);
+    }
+
+    @Override
+    public OrderStatisticsResponse getWeeklyStatics(OrderStatisticsRequest request) {
+        // Query dữ liệu
+        List<Map<String, Object>> dailyRawDate = orderMapper.getDailyStatistics(request.getStartDate(), request.getEndDate());
+
+        List<DailyStatsResponse> detail = new ArrayList<>();
+        // Khởi tạo tổng tiền tuần
+        BigDecimal totalWeek = BigDecimal.ZERO;
+
+        for(Map<String, Object> map : dailyRawDate){
+            LocalDate date = LocalDate.parse(map.get("date").toString());
+            Integer orderCount = ((Number) map.get("order_count")).intValue();
+            BigDecimal totalAmount = new BigDecimal(map.get("total_amount").toString());
+            totalWeek = totalWeek.add(totalAmount);
+
+            detail.add(DailyStatsResponse.builder()
+                    .date(date)
+                    .orderCount(orderCount)
+                    .totalAmount(totalAmount)
+                    .build());
+        }
+
+        // Tính % tổng tiền từng ngày
+        for(DailyStatsResponse d : detail){
+            if(totalWeek.compareTo(BigDecimal.ZERO) > 0){
+                BigDecimal percent = d.getTotalAmount()
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(totalWeek, 2, RoundingMode.HALF_UP);
+                d.setPercentOfWeek(percent.doubleValue());
+            }else {
+                d.setPercentOfWeek(0.0);
+            }
+        }
+
+        return OrderStatisticsResponse.builder()
+                .totalAmount(totalWeek)
+                .details(detail)
+                .build();
+    }
+
+    @Override
+    public OrderStatisticsResponse getMonthlyStatics(int month, int year) {
+        LocalDate firstDay = LocalDate.of(year, month, 1);
+        LocalDate lastDay = firstDay.withDayOfMonth(firstDay.lengthOfMonth());
+
+        // Query dữ liệu thật từ DB
+        List<Map<String, Object>> weeklyRawData = orderMapper.getWeeklyStatistics(firstDay, lastDay);
+
+        // Lưu dữ liệu thực tế
+        Map<Integer, WeeklyStatsResponse> actualWeeks = new HashMap<>();
+        BigDecimal totalMonth = BigDecimal.ZERO;
+
+        for (Map<String, Object> row : weeklyRawData) {
+            Integer weekNumber = ((Number) row.get("week_number")).intValue();
+            Integer orderCount = ((Number) row.get("order_count")).intValue();
+            BigDecimal totalAmount = new BigDecimal(row.get("total_amount").toString());
+            totalMonth = totalMonth.add(totalAmount);
+
+            WeeklyStatsResponse stat = WeeklyStatsResponse.builder()
+                    .weekNumber(weekNumber)
+                    .orderCount(orderCount)
+                    .totalAmount(totalAmount)
+                    .build();
+
+            actualWeeks.put(weekNumber, stat);
+        }
+
+        // Tính tổng số tuần có thể có trong tháng
+        int totalWeeksInMonth = lastDay.get(ChronoField.ALIGNED_WEEK_OF_MONTH);
+
+        List<WeeklyStatsResponse> details = new ArrayList<>();
+
+        for (int i = 1; i <= totalWeeksInMonth; i++) {
+            WeeklyStatsResponse weekStat = actualWeeks.getOrDefault(i,
+                    WeeklyStatsResponse.builder()
+                            .weekNumber(i)
+                            .orderCount(0)
+                            .totalAmount(BigDecimal.ZERO)
+                            .percentOfMonth(0.0)
+                            .build()
+            );
+            details.add(weekStat);
+        }
+
+        // Sau khi điền đủ các tuần → tính phần trăm
+        for (WeeklyStatsResponse w : details) {
+            if (totalMonth.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal percent = w.getTotalAmount()
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(totalMonth, 2, RoundingMode.HALF_UP);
+                w.setPercentOfMonth(percent.doubleValue());
+            } else {
+                w.setPercentOfMonth(0.0);
+            }
+        }
+
+        // Tạo nhãn MONTH n
+        String label = "MONTH " + month;
+
+        return OrderStatisticsResponse.builder()
+                .type(label)
+                .totalAmount(totalMonth)
+                .details(details)
+                .build();
     }
 }

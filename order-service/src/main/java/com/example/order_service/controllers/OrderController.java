@@ -1,6 +1,8 @@
 package com.example.order_service.controllers;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 
 import com.example.order_service.dtos.request.OrderStatisticsRequest;
@@ -148,18 +150,26 @@ public class OrderController {
     }
 
     @GetMapping("/month/statics")
-    public ResponseEntity<OrderStatisticsResponse> getStatisticMonthly(@RequestParam(required = false) Integer month,
-                                                                   @RequestParam(required = false) Integer year){
-        return ResponseEntity.ok(orderService.getMonthlyStatics(month, year));
+    public ResponseEntity<OrderStatisticsResponse> getStatisticMonthly(@Valid @RequestBody OrderStatisticsRequest request){
+        return ResponseEntity.ok(orderService.getMonthlyStatics(request));
     }
 
-    @PostMapping("/statics")
-    public ResponseEntity<OrderStatisticsResponse> getStatics(@Valid @RequestBody OrderStatisticsRequest request){
-        if(request.getType().toUpperCase().equals("W")){
-            return ResponseEntity.ok(orderService.getWeeklyStatics(request));
-        }else if(request.getType().toUpperCase().equals("M")){
-            return ResponseEntity.ok(orderService.getMonthlyStatics(request));
-        }else
-           return null;
+    @PostMapping("/statistics")
+    public ResponseEntity<OrderStatisticsResponse> getStatics(@Valid @RequestBody OrderStatisticsRequest request) {
+
+        String type = request.getType() != null ? request.getType().trim().toUpperCase() : "";
+        switch (type) {
+            case "W" -> { return ResponseEntity.ok(orderService.getWeek(request)); }
+            case "M" -> { return ResponseEntity.ok(orderService.getMonth(request)); }
+            default -> {
+                return ResponseEntity.badRequest()
+                        .body(OrderStatisticsResponse.builder()
+                                .type("INVALID")
+                                .totalAmount(BigDecimal.ZERO)
+                                .details(Collections.emptyList())
+                                .build());
+            }
+        }
     }
+
 }

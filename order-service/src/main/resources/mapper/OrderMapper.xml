@@ -128,10 +128,9 @@
         SELECT
             DATE(order_date) AS date,
             COUNT(*) AS order_count,
-            SUM(total_amount) AS total_amount
+            COALESCE(SUM(total_amount), 0) AS total_amount
         FROM orders
-        WHERE order_date BETWEEN #{startDate} AND #{endDate}
-
+        WHERE DATE(order_date) BETWEEN #{startDate} AND #{endDate}
         GROUP BY DATE(order_date)
         ORDER BY DATE(order_date)
     </select>
@@ -144,9 +143,9 @@
             COUNT(*) AS order_count,
             COALESCE(SUM(total_amount), 0) AS total_amount
         FROM orders
-        WHERE order_date BETWEEN #{firstDay} AND #{lastDay}
+        WHERE DATE(order_date) BETWEEN #{firstDay} AND #{lastDay}
         GROUP BY week_number
-        ORDER BY week_number;
+        ORDER BY week_number
     </select>
 
     <!-- ===================================================== -->

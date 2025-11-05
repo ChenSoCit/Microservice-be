@@ -1,13 +1,10 @@
 package com.example.order_service.services;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
-import com.example.order_service.dtos.request.OrderStatisticsRequest;
-import com.example.order_service.dtos.response.OrderItemResponse;
-import com.example.order_service.commons.OrderStatus;
 import com.example.order_service.dtos.request.OrderRequest;
+import com.example.order_service.dtos.request.OrderStatisticsRequest;
 import com.example.order_service.dtos.response.CntOrderResponse;
 import com.example.order_service.dtos.response.OrderDetailResponse;
 import com.example.order_service.dtos.response.OrderStatisticsResponse;
@@ -38,5 +35,9 @@ public interface OrderService {
 
     OrderStatisticsResponse getWeeklyStatics(OrderStatisticsRequest request);
 
-    OrderStatisticsResponse getMonthlyStatics(int month, int year);
+    OrderStatisticsResponse getMonthlyStatics(OrderStatisticsRequest request);
+
+    OrderStatisticsResponse getWeek(OrderStatisticsRequest request);
+    
+    OrderStatisticsResponse getMonth(OrderStatisticsRequest request);
 }

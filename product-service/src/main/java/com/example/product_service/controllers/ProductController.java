@@ -61,10 +61,17 @@ public class ProductController {
     @PutMapping("/stock/decrease")
     public ResponseEntity<String> updateStockDecrease(@RequestParam int productId
             , @RequestParam int quantity){
-
         productService.decreaseStockProduct(productId, quantity);
 
         return ResponseEntity.ok("Decrease stock successfully");
+    }
+
+    @PutMapping("/stock/increase")
+    public ResponseEntity<String> increaseStockProduct(@RequestParam int productId
+            , @RequestParam int quantity){
+
+        productService.increaseStockProduct(productId, quantity);
+        return ResponseEntity.ok("Increase stock successfully");
     }
 
    

@@ -28,6 +28,9 @@ public interface ProductClient {
     @PutMapping("/stock/decrease")
     String updateStockDecrease(@RequestParam int productId, @RequestParam int quantity);
 
+    @PutMapping("/stock/increase")
+    String updateStockIncrease(@RequestParam int productId, @RequestParam int quantity);
+
     @DeleteMapping("/{id}")
     Integer deleteProduct(@PathVariable("id") long id);
 

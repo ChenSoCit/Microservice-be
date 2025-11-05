@@ -5,21 +5,27 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoField;
+import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
-import com.example.order_service.dtos.request.OrderStatisticsRequest;
-import com.example.order_service.dtos.response.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.order_service.clients.UserClient;
 import com.example.order_service.commons.OrderStatus;
 import com.example.order_service.dtos.request.OrderRequest;
+import com.example.order_service.dtos.request.OrderStatisticsRequest;
+import com.example.order_service.dtos.response.CntOrderResponse;
+import com.example.order_service.dtos.response.DailyStatsResponse;
+import com.example.order_service.dtos.response.OrderDetailResponse;
+import com.example.order_service.dtos.response.OrderItemResponse;
+import com.example.order_service.dtos.response.OrderStatisticsResponse;
+import com.example.order_service.dtos.response.WeeklyStatsResponse;
 import com.example.order_service.mappers.OrderDetailMapper;
 import com.example.order_service.mappers.OrderMapper;
 import com.example.order_service.models.Order;
@@ -28,6 +34,7 @@ import com.example.order_service.services.OrderService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 
 @Service
 @Slf4j(topic = "ORDER-SERVICE")
@@ -335,7 +342,14 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderStatisticsResponse getWeeklyStatics(OrderStatisticsRequest request) {
         // Query dữ liệu
-        List<Map<String, Object>> dailyRawDate = orderMapper.getDailyStatistics(request.getStartDate(), request.getEndDate());
+        List<Map<String, Object>> dailyRawDate;
+        try {
+            dailyRawDate = orderMapper.getDailyStatistics(request.getStartDate(), request.getEndDate());
+            log.info("Successfully fetched daily statistics from {} to {}", request.getStartDate(), request.getEndDate());
+        } catch (Exception e) {
+            log.error("Error fetching daily statistics from DB: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch daily statistics from database", e);
+        }
 
         List<DailyStatsResponse> detail = new ArrayList<>();
         // Khởi tạo tổng tiền tuần
@@ -373,7 +387,9 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderStatisticsResponse getMonthlyStatics(int month, int year) {
+    public OrderStatisticsResponse getMonthlyStatics(OrderStatisticsRequest request) {
+        int month = request.getMonth();
+        int year = request.getYear();
         LocalDate firstDay = LocalDate.of(year, month, 1);
         LocalDate lastDay = firstDay.withDayOfMonth(firstDay.lengthOfMonth());
 
@@ -437,4 +453,166 @@ public class OrderServiceImpl implements OrderService {
                 .details(details)
                 .build();
     }
+
+    @Override
+    @Transactional
+    public OrderStatisticsResponse getWeek(OrderStatisticsRequest request) {
+        LocalDate startDate = request.getStartDate();
+        LocalDate endDate = request.getEndDate();
+
+        //  Query dữ liệu thật từ DB
+        List<Map<String, Object>> dailyRawData;
+        try {
+            dailyRawData = orderMapper.getDailyStatistics(startDate, endDate);
+            log.info("Successfully fetched daily statistics for month from {} to {}", startDate, endDate);
+        } catch (Exception e) {
+            log.error("Error fetching daily statistics from database: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch daily statistics from database", e);
+        }
+
+        // Map dữ liệu thật ra HashMap để tra nhanh theo ngày
+        Map<LocalDate, Map<String, Object>> actualData = new HashMap<>();
+        for (Map<String, Object> row : dailyRawData) {
+            LocalDate date = LocalDate.parse(row.get("date").toString());
+            actualData.put(date, row);
+        }
+
+        //  Khởi tạo danh sách kết quả đủ ngày
+        List<DailyStatsResponse> details = new ArrayList<>();
+        BigDecimal totalWeek = BigDecimal.ZERO;
+
+        // Duyệt từng ngày trong khoảng thời gian
+        LocalDate current = startDate;
+        while (!current.isAfter(endDate)) {
+            Map<String, Object> row = actualData.get(current);
+
+            Integer orderCount = 0;
+            BigDecimal totalAmount = BigDecimal.ZERO;
+
+            if (row != null) {
+                orderCount = ((Number) row.get("order_count")).intValue();
+                totalAmount = new BigDecimal(row.get("total_amount").toString());
+            }
+
+            totalWeek = totalWeek.add(totalAmount);
+
+            details.add(DailyStatsResponse.builder()
+                    .date(current)
+                    .orderCount(orderCount)
+                    .totalAmount(totalAmount)
+                    .percentOfWeek(0.0)
+                    .build());
+
+            current = current.plusDays(1);
+        }
+
+        // Tính phần trăm tổng tiền từng ngày
+        for (DailyStatsResponse d : details) {
+            if (totalWeek.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal percent = d.getTotalAmount()
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(totalWeek, 2, RoundingMode.HALF_UP);
+                d.setPercentOfWeek(percent.doubleValue());
+            } else {
+                d.setPercentOfWeek(0.0);
+            }
+        }
+
+        // Trả response
+        return OrderStatisticsResponse.builder()
+                .type("WEEK " + startDate + " → " + endDate)
+                .totalAmount(totalWeek)
+                .details(details)
+                .build();
+    }
+
+
+    @Override
+    @Transactional
+    public OrderStatisticsResponse getMonth(OrderStatisticsRequest request) {
+        LocalDate startDate = request.getStartDate();
+        LocalDate endDate = request.getEndDate();
+
+        // Lấy dữ liệu từng ngày từ DB
+        List<Map<String, Object>> dailyRawData;
+        try {
+            dailyRawData = orderMapper.getDailyStatistics(startDate, endDate);
+            log.info("Successfully fetched daily statistics for month from {} to {}", startDate, endDate);
+        } catch (Exception e) {
+            log.error("Error fetching daily statistics from database: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch daily statistics from database", e);
+        }
+
+        //  Tạo map để nhóm theo tuần trong tháng
+        Map<Integer, WeeklyStatsResponse> weekMap = new HashMap<>();
+        BigDecimal totalMonthAmount = BigDecimal.ZERO;
+
+        WeekFields weekFields = WeekFields.of(Locale.getDefault());
+
+        for (Map<String, Object> row : dailyRawData) {
+            LocalDate date = LocalDate.parse(row.get("date").toString());
+            Integer orderCount = ((Number) row.get("order_count")).intValue();
+            BigDecimal totalAmount = new BigDecimal(row.get("total_amount").toString());
+
+            // Tính tuần trong tháng
+            int weekOfMonth = date.get(weekFields.weekOfMonth());
+
+            // Gom nhóm theo tuần
+            WeeklyStatsResponse stat = weekMap.getOrDefault(
+                    weekOfMonth,
+                    WeeklyStatsResponse.builder()
+                            .weekNumber(weekOfMonth)
+                            .orderCount(0)
+                            .totalAmount(BigDecimal.ZERO)
+                            .percentOfMonth(0.0)
+                            .build()
+            );
+
+            // Cộng dồn dữ liệu
+            stat.setOrderCount(stat.getOrderCount() + orderCount);
+            stat.setTotalAmount(stat.getTotalAmount().add(totalAmount));
+
+            weekMap.put(weekOfMonth, stat);
+
+            totalMonthAmount = totalMonthAmount.add(totalAmount);
+        }
+
+        //  Xác định tổng số tuần trong tháng
+        int totalWeeks = endDate.get(weekFields.weekOfMonth());
+
+        //  Đảm bảo tuần trống vẫn có
+        List<WeeklyStatsResponse> weeklyList = new ArrayList<>();
+        for (int i = 1; i <= totalWeeks; i++) {
+            WeeklyStatsResponse stat = weekMap.getOrDefault(
+                    i,
+                    WeeklyStatsResponse.builder()
+                            .weekNumber(i)
+                            .orderCount(0)
+                            .totalAmount(BigDecimal.ZERO)
+                            .percentOfMonth(0.0)
+                            .build()
+            );
+            weeklyList.add(stat);
+        }
+
+        // Tính % doanh thu từng tuần
+        for (WeeklyStatsResponse w : weeklyList) {
+            if (totalMonthAmount.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal percent = w.getTotalAmount()
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(totalMonthAmount, 2, RoundingMode.HALF_UP);
+                w.setPercentOfMonth(percent.doubleValue());
+            } else {
+                w.setPercentOfMonth(0.0);
+            }
+        }
+
+        //  Trả kết quả
+        return OrderStatisticsResponse.builder()
+                .type("MONTH " + startDate.getMonthValue())
+                .totalAmount(totalMonthAmount)
+                .details(weeklyList)
+                .build();
+    }
+
 }

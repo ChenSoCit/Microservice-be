@@ -1,11 +1,25 @@
 package com.example.client_server.controller;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import com.example.client_server.dto.OrderStatus;
+import com.example.client_server.dto.request.OrderStatisticsRequest;
+import com.example.client_server.dto.response.*;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.example.client_server.client.OrderClient;
 import com.example.client_server.client.ProductClient;
@@ -15,10 +29,6 @@ import com.example.client_server.dto.OrderItemDetail;
 import com.example.client_server.dto.request.MapOrderRequest;
 import com.example.client_server.dto.request.OrderItemRequest;
 import com.example.client_server.dto.request.OrderRequest;
-import com.example.client_server.dto.response.CntOrderResponse;
-import com.example.client_server.dto.response.OrderResponse;
-import com.example.client_server.dto.response.ProductResponse;
-import com.example.client_server.dto.response.UserResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -194,7 +204,7 @@ public class OrderProxyController {
 
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<OrderResponse> changeStatus(@PathVariable("id") int id,@RequestParam(required = false) String status){
+    public ApiResponse<OrderResponse> changeStatus(@PathVariable("id") int id, @RequestParam(required = false) String status){
         OrderResponse orderResponse = orderClient.updateOrderStatus(id, status);
         return ApiResponse.<OrderResponse>builder()
                 .code(200)
@@ -202,4 +212,67 @@ public class OrderProxyController {
                 .data(orderResponse)
                 .build();
     }
+
+    @PostMapping("/{orderId}/cancel")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<OrderResponse> cancelOrder(@PathVariable("orderId") int orderId, @RequestParam(required = false) String status){
+        // update order
+        orderClient.updateOrderStatus(orderId, status);
+        // check order
+        OrderResponse orderResponse = orderClient.getOrder(orderId);
+
+        List<OrderItemResponse> items1 = orderResponse.getOrderItems();
+        for(OrderItemResponse item : items1){
+            String result = productClient.updateStockIncrease(item.getProductId(), item.getQuantity());
+            log.info("✅ Stock Increased for product {}: {}", item.getProductId(), result);
+        }
+        return ApiResponse.<OrderResponse>builder()
+                .code(200)
+                .message("Order cancelled successfully")
+                .data(orderResponse)
+                .build();
+    }
+
+    @GetMapping("/week/statics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Object> getOrderStatisticWeek(
+                                                      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)LocalDate startDate,
+                                                      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                                                      @RequestParam(required = false) Integer month,
+                                                      @RequestParam(required = false) Integer year){
+
+        OrderStatisticsResponse result = orderClient.getStatisticsWeekly(startDate, endDate, month, year);
+        return ApiResponse.builder()
+                .code(200)
+                .message("get order statistic week")
+                .data(result)
+                .build();
+    }
+
+    @GetMapping("/month/statics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Object> getOrderStatisticMonth(
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year){
+
+        OrderStatisticsWeeklyResponse result = orderClient.getStatisticsMonthly(month, year);
+        return ApiResponse.builder()
+                .code(200)
+                .message("get order statistic week")
+                .data(result)
+                .build();
+    }
+
+    @PostMapping("/statistics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Object> getOrderStatistics(@RequestBody OrderStatisticsRequest request){
+
+        ResponseStatistic result = orderClient.getStatistics(request);
+        return ApiResponse.builder()
+                .code(200)
+                .message("get order statistics")
+                .data(result)
+                .build();
+    }
+
 }

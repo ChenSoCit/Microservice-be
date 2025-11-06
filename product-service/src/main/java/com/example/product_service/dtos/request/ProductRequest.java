@@ -14,6 +14,7 @@ public class ProductRequest {
     @NotBlank(message = "Tên sản phẩm không được để trống")
     private String nameProduct;
 
+    @NotNull(message = "description không được để trống")
     private String description;
 
     @NotNull(message = "Giá không được null")

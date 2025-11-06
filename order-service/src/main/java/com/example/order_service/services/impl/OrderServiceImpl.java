@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.order_service.clients.UserClient;
 import com.example.order_service.commons.OrderStatus;
 import com.example.order_service.dtos.request.OrderRequest;
 import com.example.order_service.dtos.request.OrderStatisticsRequest;
@@ -46,7 +45,6 @@ import lombok.extern.slf4j.Slf4j;
 public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final OrderDetailMapper orderDetailMapper;
-    private final UserClient userClient;
 
     @Override
     @Transactional
@@ -399,7 +397,7 @@ public class OrderServiceImpl implements OrderService {
         LocalDate lastDay = firstDay.withDayOfMonth(firstDay.lengthOfMonth());
 
         //  Type=W: Thống kê theo NGÀY trong tuần cụ thể (DailyStatsResponse)
-        if ("W".equalsIgnoreCase(type) && month != null && week != null) {
+        if ("W".equalsIgnoreCase(type) && week != null) {
             log.info("Getting daily statistics for week {} of month {}", week, month);
             
             // Tính ngày bắt đầu và kết thúc của tuần đó

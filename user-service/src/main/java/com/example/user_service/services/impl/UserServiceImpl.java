@@ -1,7 +1,5 @@
 package com.example.user_service.services.impl;
 
-
-
 import java.util.Collections;
 import java.util.List;
 
@@ -37,6 +35,7 @@ public class UserServiceImpl implements UserService{
     private final RoleMapper roleMapper;
     private final OrderClient orderClient;
 
+    /* Tao moi user */
     @Override
     @Transactional
     public UserResponse createUser(UserRequest request) {
@@ -96,14 +95,16 @@ public class UserServiceImpl implements UserService{
         }
     }
 
+    /* Tim kiem user theo id */
     @Override
+    @Transactional
     public UserResponse getUserById(int id) {
         log.info("Fetching user with ID: {}", id);
         
         try {
             UserResponse response = userMapper.getUserById(id);
             if (response == null) {
-                log.warn("User not found with ID: {}", id);
+                log.warn("Get user not found with ID: {}", id);
                 throw new ResourceNotFoundException("User not found with ID: " + id);
             }
             return response;
@@ -113,7 +114,9 @@ public class UserServiceImpl implements UserService{
         }
     }
 
+    /* update user */
     @Override
+    @Transactional
     public UserResponse updateUser(UserRequest request, Integer userId) {
         log.info("Updating user with ID: {}", userId);
         
@@ -147,14 +150,14 @@ public class UserServiceImpl implements UserService{
             log.info("User updated successfully with ID: {}", userId);
 
             return  UserResponse.builder()
-                .id(userId)
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .email(user.getEmail())
-                .address(user.getAddress())
-                .dateOfBirth(user.getDateOfBirth())
-                .phone(user.getPhoneNumber())
-                .roleId(user.getRoleId())
+                    .id(userId)
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .email(user.getEmail())
+                    .address(user.getAddress())
+                    .dateOfBirth(user.getDateOfBirth())
+                    .phone(user.getPhoneNumber())
+                    .roleId(user.getRoleId())
                     .userName(user.getUserName())
                     .password(user.getPassword())
                 .gender(user.getGender())
@@ -179,7 +182,9 @@ public class UserServiceImpl implements UserService{
         }
     }
 
+    /* Kiem tra role user */
     @Override
+    @Transactional
     public String checkRole(int id) {
         log.info("Checking role for user ID: {}", id);
         
@@ -209,6 +214,7 @@ public class UserServiceImpl implements UserService{
         }
     }
 
+    /* Xoa user */
     @Override
     @Transactional
     public int deleteUser(int userId) {
@@ -239,7 +245,9 @@ public class UserServiceImpl implements UserService{
         }
     }
 
+    /*Thong tin user + order*/
     @Override
+    @Transactional
     public UserWithOrderResponse getUserWithOrder(Integer id) {
         log.info("Fetching user with orders for ID: {}", id);
         
@@ -274,7 +282,9 @@ public class UserServiceImpl implements UserService{
         }
     }
 
+    /* Tim kiem user theo name */
     @Override
+    @Transactional
     public UserResponse getByUserName(String username) {
         log.info("Fetching user with username: {}", username);
         

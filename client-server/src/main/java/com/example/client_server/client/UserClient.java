@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-import com.example.client_server.dto.ApiResponse;
 import com.example.client_server.dto.request.UserRequest;
 import com.example.client_server.dto.response.UserResponse;
 import com.example.client_server.dto.response.UserWithOrderResponse;

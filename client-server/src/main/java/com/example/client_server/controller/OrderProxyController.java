@@ -1,15 +1,12 @@
 package com.example.client_server.controller;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import com.example.client_server.dto.request.OrderStatisticsRequest;
 import com.example.client_server.dto.response.*;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -148,7 +145,7 @@ public class OrderProxyController {
             List<OrderItemRequest> items1 = orderRequest.getItems();
             for(OrderItemRequest item : items1){
                 String result = productClient.updateStockDecrease(item.getProductId(), item.getQuantity());
-                log.info("✅ Stock decreased for product {}: {}", item.getProductId(), result);
+                log.info(" Stock decreased for product {}: {}", item.getProductId(), result);
             }
         } catch (RuntimeException e) {
             throw new RuntimeException(e);
@@ -223,7 +220,7 @@ public class OrderProxyController {
         List<OrderItemResponse> items1 = orderResponse.getOrderItems();
         for(OrderItemResponse item : items1){
             String result = productClient.updateStockIncrease(item.getProductId(), item.getQuantity());
-            log.info("✅ Stock Increased for product {}: {}", item.getProductId(), result);
+            log.info("Stock Increased for product {}: {}", item.getProductId(), result);
         }
         return ApiResponse.<OrderResponse>builder()
                 .code(200)

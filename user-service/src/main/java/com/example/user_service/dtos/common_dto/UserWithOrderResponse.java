@@ -23,5 +23,6 @@ public class UserWithOrderResponse {
     @JsonProperty("last_name")
     private String lastName;
 
+    @JsonProperty("order")
     private List<OrderResponse> order;
 }

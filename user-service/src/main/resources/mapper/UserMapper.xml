@@ -23,7 +23,7 @@
             #{dateOfBirth},
             #{gender},
             #{address},
-            #{phone},
+            #{phoneNumber},
             #{roleId},
             #{password},
             #{userName},

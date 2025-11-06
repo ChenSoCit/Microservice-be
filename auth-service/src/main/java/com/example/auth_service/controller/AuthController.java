@@ -3,8 +3,6 @@ package com.example.auth_service.controller;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -50,7 +48,6 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public JwtTokenResponse refreshToken(@Valid @RequestBody RefreshTokenRequest request){
-
         return authService.refreshToken(request);
     }
 

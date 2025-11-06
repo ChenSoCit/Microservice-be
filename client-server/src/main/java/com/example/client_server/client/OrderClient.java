@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.example.client_server.dto.ApiResponse;
 import com.example.client_server.dto.request.MapOrderRequest;
 import com.example.client_server.dto.request.OrderRequest;
-import com.example.client_server.dto.OrderStatus;
+
 
 @FeignClient(name = "order-service", path = "/api/v1/orders")
 public interface OrderClient {

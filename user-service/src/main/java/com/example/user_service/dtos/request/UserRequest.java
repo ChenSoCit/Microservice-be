@@ -27,7 +27,7 @@ public class UserRequest {
     @Email(message = "Invalid email format")
     private String email;
 
-    @NotNull(message = "usename is required")
+    @NotNull(message = "User name is required")
     private String userName;
 
     @NotNull(message = "password must be not null")

@@ -27,18 +27,21 @@ public class ProductController {
     
     private final ProductService productService;
 
+    /* Tao moi product */
     @PostMapping("/insert")
     public Integer insertProduct(@Valid @RequestBody ProductRequest request){
         log.info("Request to insert product");
         return productService.insertProduct(request);
     }
 
+    /* tim kiem product theo id */
     @GetMapping("/{id}")
     public ProductResponse getProductById(@PathVariable("id") int id){
         log.info("Request to get product by ID: {}", id);
         return productService.getProductById(id);
     }
 
+    /* chap nhat product */
     @PutMapping("/{id}")
     public ProductResponse upDateProduct(@PathVariable("id") Integer id
                                         ,@Valid @RequestBody ProductRequest request){
@@ -46,6 +49,7 @@ public class ProductController {
         return productService.upDateProduct(id, request);
     }
 
+    /* giam ton hang */
     @PutMapping("/stock/decrease")
     public String updateStockDecrease(@RequestParam int productId
                                     , @RequestParam int quantity){
@@ -54,6 +58,7 @@ public class ProductController {
         return "Decrease stock successfully";
     }
 
+    /* tang ton hang */
     @PutMapping("/stock/increase")
     public String increaseStockProduct(@RequestParam int productId
                                     , @RequestParam int quantity){
@@ -62,13 +67,14 @@ public class ProductController {
         return "Increase stock successfully";
     }
 
-   
+    /* xoa product */
     @DeleteMapping("/{id}")
     public Integer deleteProduct(@PathVariable("id") Integer id) {
         log.info("Request to delete product by ID: {}", id);
         return productService.deleteProduct(id);
     }
 
+    /* tim kiem product theo keyword */
     @GetMapping("/search")
     public ProductPageResponse searchProduct(
             @RequestParam(required = false) String keyword,
@@ -79,6 +85,7 @@ public class ProductController {
     }
 
 
+    /* xap xep product theo gia */
     @GetMapping("/sort")
     public ProductPageResponse findByPrice(
             @RequestParam(required = false) String sort,

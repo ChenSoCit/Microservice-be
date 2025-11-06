@@ -1,19 +1,13 @@
 package com.example.product_service.services.impl;
 
-import java.util.ArrayList;
 import java.util.List;
-
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.product_service.clients.OrderDetailClient;
-import com.example.product_service.dtos.request.ProductRequest;
-import com.example.product_service.dtos.response.ApiResponse;
-import com.example.product_service.dtos.response.ProductPageResponse;
 import com.example.product_service.dtos.common_dto.ProductResponse;
-import com.example.product_service.dtos.response.TopProductStatResponse;
-import com.example.product_service.dtos.response.TopSellingProductResponse;
+import com.example.product_service.dtos.request.ProductRequest;
+import com.example.product_service.dtos.response.ProductPageResponse;
 import com.example.product_service.exceptions.BadRequestException;
 import com.example.product_service.exceptions.DatabaseOperationException;
 import com.example.product_service.exceptions.ResourceNotFoundException;
@@ -21,8 +15,6 @@ import com.example.product_service.mappers.ProductMapper;
 import com.example.product_service.mapstruct.ProductMapStruct;
 import com.example.product_service.models.Product;
 import com.example.product_service.services.ProductService;
-
-
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ProductServiceImpl implements ProductService {
     
     private final ProductMapper productMapper;
-    private final OrderDetailClient orderDetailClient;
     private final ProductMapStruct productMapstruct;
 
     @Override
@@ -190,48 +181,6 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    @Override
-    public List<TopSellingProductResponse> getTopSellingProducts() {
-        try {
-            // 1. Gọi sang order-detail-service để lấy thống kê top sản phẩm
-            ApiResponse<List<TopProductStatResponse>> response = orderDetailClient.getTopProduct();
-        
-            if (response == null || response.getData() == null) {
-                log.warn("No data received from order-detail-service");
-                return new ArrayList<>();
-            }
-
-            List<TopProductStatResponse> stats = response.getData();
-            
-            // 2. Join thêm thông tin từ bảng product
-            List<TopSellingProductResponse> result = new ArrayList<>();
-            for(TopProductStatResponse stat : stats){
-                try {
-                    ProductResponse product = productMapper.getProductById(stat.getProductId());
-                    if(product != null){
-                        TopSellingProductResponse item = TopSellingProductResponse.builder()
-                            .productId(product.getId())
-                            .nameProduct(product.getNameProduct())
-                            .categoryId(product.getCategoryId())
-                            .price(product.getPrice())
-                            .totalSold(stat.getTotalSold())
-                        .build();
-                        result.add(item);
-                    } else {
-                        log.warn("Product not found for productId: {}", stat.getProductId());
-                    }
-                } catch (Exception e) {
-                    log.error("Error processing product ID: {}", stat.getProductId(), e);
-                    // Continue với product tiếp theo
-                }
-            }
-            return result;
-        } catch (Exception e) {
-            log.error("Error calling order-detail-service", e);
-            throw new BadRequestException("Failed to get top selling products: " + e.getMessage());
-        }
-        
-    }
 
     @Override
     public ProductPageResponse searchProduct(String keyword, int page, int size) {
@@ -289,9 +238,4 @@ public class ProductServiceImpl implements ProductService {
 
         return productPageResponse;
     }
-
-    
-    
-
-
 }

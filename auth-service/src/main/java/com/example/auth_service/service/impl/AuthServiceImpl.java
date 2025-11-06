@@ -4,6 +4,7 @@ package com.example.auth_service.service.impl;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.example.auth_service.exception.BadRequestException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -72,10 +73,7 @@ public class AuthServiceImpl implements AuthService{
             .password(encodePassword)
             .userName(request.getUserName())
         .build();
-
-
-        UserResponse response = userClient.create(req);
-        return response;
+        return userClient.create(req);
     }
 
     @Override
@@ -83,13 +81,12 @@ public class AuthServiceImpl implements AuthService{
         String Token = request.getRefreshToken();
         
         if(!jwtTokenUtil.validateToken(Token)){
-            throw new com.example.auth_service.exception.BadRequestException("Invalid refresh token");
+            throw new BadRequestException("Invalid refresh token");
         }
 
         String username = jwtTokenUtil.getUsernameFromToken(Token);
         log.info("username: {}", username);
         UserResponse user = userClient.getByUserName(username);
-        
 
         if(user == null){
             throw new ResourceNotFoundException("User not found");
@@ -103,11 +100,10 @@ public class AuthServiceImpl implements AuthService{
         String newRefreshToken = jwtTokenUtil.generateRefreshToken(username);
 
         return JwtTokenResponse.builder()
-        .accessToken(newAccessToken)
-        .refreshToken(newRefreshToken)
-        .tokenType("Bearer")
-        .exporationTime(jwtTokenUtil.getAccessTokenExpiryDate())
-        .build();
+            .accessToken(newAccessToken)
+            .refreshToken(newRefreshToken)
+            .tokenType("Bearer")
+            .exporationTime(jwtTokenUtil.getAccessTokenExpiryDate())
+            .build();
     }
-
 }

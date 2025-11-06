@@ -15,6 +15,5 @@ public class JwtTokenResponse {
     private String accessToken;
     private String refreshToken;
     private String tokenType;
-    // keep existing name used elsewhere in project
     private Date exporationTime;
 }

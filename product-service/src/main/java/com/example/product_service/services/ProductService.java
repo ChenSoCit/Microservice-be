@@ -1,11 +1,8 @@
 package com.example.product_service.services;
 
-import java.util.List;
-
+import com.example.product_service.dtos.common_dto.ProductResponse;
 import com.example.product_service.dtos.request.ProductRequest;
 import com.example.product_service.dtos.response.ProductPageResponse;
-import com.example.product_service.dtos.common_dto.ProductResponse;
-import com.example.product_service.dtos.response.TopSellingProductResponse;
 
 
 
@@ -21,8 +18,6 @@ public interface  ProductService {
     void decreaseStockProduct(int productId, int quantity);
 
     void increaseStockProduct(Integer productId, Integer quantity);
-
-    List<TopSellingProductResponse> getTopSellingProducts();
 
     ProductPageResponse searchProduct(String keyword, int page, int size);
 

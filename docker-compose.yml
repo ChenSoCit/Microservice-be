@@ -123,6 +123,7 @@ services:
         condition: service_started
       product-service:
         condition: service_started
+      
     networks:
       - micro-net
 

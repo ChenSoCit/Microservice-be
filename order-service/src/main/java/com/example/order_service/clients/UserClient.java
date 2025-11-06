@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import com.example.order_service.dtos.response.UserResponse;
 
-@FeignClient(name = "user-service", path="/api/internal/users")
+@FeignClient(name = "user-service", path="/api/v1/users")
 public interface UserClient {
     
     @GetMapping("/{id}")

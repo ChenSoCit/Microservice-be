@@ -1,10 +1,13 @@
 package com.example.order_service.mappers;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import com.example.order_service.dtos.response.CntOrderResponse;
-import com.example.order_service.dtos.response.OrderResponse;
+import com.example.order_service.dtos.response.DailyStatsResponse;
+import com.example.order_service.dtos.response.OrderDetailResponse;
 import com.example.order_service.models.Order;
 
 import feign.Param;
@@ -14,7 +17,9 @@ public interface OrderMapper {
 
     Order getOrderById(int id);
 
-    List<OrderResponse> getOrderByUserId(int userId);
+    Order getOrderByUser(int userId);
+
+    List<Order> getAllOrderByUser(int userId);
 
     CntOrderResponse statisOrder(int userId);
 
@@ -29,4 +34,13 @@ public interface OrderMapper {
     int increaseTotalMoney(@Param("orderId") Integer orderId, @Param("totalMoney") BigDecimal totalMoney);
         
     int updateStatus(@Param("id") Integer id, @Param("status") String status);
+
+    List<Order> findOrderBetween (@Param("startDate") LocalDate startDate,@Param("endDate") LocalDate endDate);
+
+    List<Map<String, Object>> getDailyStatistics(@Param("startDate") LocalDate startDate,
+                                                 @Param("endDate") LocalDate endDate);
+
+    List<Map<String, Object>> getWeeklyStatistics(@Param("firstDay") LocalDate firstDay,
+                                                  @Param("lastDay") LocalDate lastDay);
+
 }

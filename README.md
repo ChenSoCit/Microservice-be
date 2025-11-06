@@ -1,62 +1,59 @@
 # Microservice E-Commerce System
 
-## Giới thiệu
-Đây là một hệ thống microservice được xây dựng bằng Spring Boot, quản lý việc bán hàng với các tính năng như xác thực người dùng, quản lý sản phẩm, đơn hàng và thanh toán.
+Hệ thống microservice quản lý bán hàng với Spring Boot, hỗ trợ xác thực JWT, quản lý sản phẩm, đơn hàng và người dùng.
 
-## Kiến trúc hệ thống
+## 🏗️ Kiến trúc hệ thống
 
-### Sơ đồ kiến trúc
 ```
-                          Client Request
-                                │
-                                ▼
-                      ┌──────────────────┐
-                      │   API Gateway    │ (Port: 8083)
-                      │  (Entry Point)   │
-                      └────────┬─────────┘
-                               │
-                ┌──────────────┴──────────────┐
-                │                             │
-                ▼                             ▼
-    ┌─────────────────────┐      ┌─────────────────────┐
-    │   Auth Service      │      │   Client Server     │ (Port: 8087)
-    │   (Port: 8081)      │      │  (API Orchestrator) │
-    │  - Login/Register   │      │  - JWT Validation   │
-    │  - JWT Generation   │      │  - Authorization    │
-    └─────────┬───────────┘      └──────────┬──────────┘
-              │                              │
-              │                   ┌──────────┼──────────┐
-              │                   │          │          │
-              ▼                   ▼          ▼          ▼
-    ┌──────────────────┐   ┌──────────┐ ┌──────┐ ┌─────────┐
-    │  User Service    │◄──│  Order   │ │Order │ │ Product │
-    │  (Port: 8082)    │   │ Service  │ │Detail│ │ Service │
-    │  - User CRUD     │   │ (8083)   │ │(8084)│ │ (8085)  │
-    │  - Internal API  │   └────┬─────┘ └──┬───┘ └────┬────┘
-    └──────────────────┘        │           │         │
-                                └───────────┴─────────┘
-                                 Service-to-Service
-                                  (Internal API)
+Client → API Gateway (8083)
+            │
+            ├─► Auth Service (8086) ──► User Service (8082)
+            │   [Login/Register]         [Internal API]
+            │
+            └─► Client Server (8087) ──┬─► User Service (8082)
+                [JWT Validation]       ├─► Order Service (8081)
+                [Authorization]        └─► Product Service (8084)
 
-                      ┌──────────────────┐
-                      │ Discovery Server │ (Port: 8761)
-                      │  (Eureka Server) │
-                      │  - Service Reg   │
-                      │  - Load Balance  │
-                      └──────────────────┘
+Discovery Server (8761) - Service Registry & Load Balancing
+PostgreSQL (5433) - Database per Service (1 Database chung cho tất cả services)
 ```
-
+```
+                    ┌──────────────────────────────┐
+                    │          Client (FE)          │
+                    └───────────────┬───────────────┘
+                                    │  (HTTP REST)
+                                    ▼
+                        ┌──────────────────────────┐
+                        │    API Gateway (8083)    │
+                        │   (Route requests only)  │
+                        └──────────────┬───────────┘
+                                       │
+                                       ▼
+                 ┌────────────────────────────────────┐
+                 │   CLIENT-SERVER (ESB) (8087)       │
+                 │  + JWT Validation & Authorization  │
+                 │  + FeignClient Error Handling      │
+                 │  + Business Logic Orchestration    │
+                 └──────┬────────────┬────────────────┘
+                        │            │
+        ┌───────────────┼────────────┼────────────┐
+        ▼               ▼            ▼            ▼
+   AUTH-SERVICE   USER-SERVICE  ORDER-SERVICE  PRODUCT-SERVICE
+   (No DB)         (userdb)      (orderdb)     (productdb)
+     (8086)          (8082)     + order_details  (8084)
+                                    (8081)
+```
 ### Luồng xử lý request
 
 #### 1. **Authentication Flow (Đăng ký/Đăng nhập)**
 ```
 Client → API Gateway (8083) → Auth Service (8081)
                                      │
-                                     ├─► UserClient (Internal)
-                                     │
-                                     ▼
-                              User Service (8082)
-                              /api/internal/users
+                                     └─► UserClient (Internal)
+                                             │
+                                             ▼
+                                      User Service (8082)
+                                      /api/internal/users
 ```
 
 #### 2. **Business API Flow (User/Order/Product)**
@@ -78,14 +75,44 @@ Client → API Gateway (8083) → Client Server (8087)
 
 #### 3. **Internal Service Communication**
 ```
-Order Service ──(Internal API)──► User Service
-                                   /api/internal/users
+Auth Service ──(Internal API)──► User Service
+                                  /api/internal/users
 
-OrderDetail Service ──(Internal API)──┬──► Order Service
-                                       │    /api/internal/orders
-                                       │
-                                       └──► Product Service
-                                            /api/internal/products
+Order Service ──(Internal API)──► Product Service
+                                   /api/internal/products/{id}/decrease-stock
+                                   /api/internal/products/{id}/increase-stock
+```
+
+## Thay đổi quan trọng trong kiến trúc
+
+### 1. ✅ Gộp OrderDetail vào Order Service
+- **Trước**: OrderDetail là service riêng (port 8085)
+- **Sau**: OrderDetail được gộp vào Order Service (port 8081)
+- **Lý do**: Giảm độ phức tạp, Order và OrderDetail luôn đi cùng nhau
+
+### 2. ✅ Business Services không dùng Spring Security
+- **User Service, Order Service, Product Service** không có Spring Security
+- **Auth Service + Client Server** xử lý toàn bộ authentication & authorization
+- **Lợi ích**: Separation of Concerns, giảm complexity
+
+### 3. ✅ FeignClient Error Handling
+- **FeignErrorDecoder**: Parse error từ microservices
+- **GlobalExceptionHandler**: Catch và format error response
+- **Custom Exceptions**: BadRequestException, ResourceNotFoundException, InsufficientStockException
+
+### 4. ✅ Order Creation Flow
+```
+1. Client gửi OrderRequest → Client Server
+2. Client Server validate:
+   - Kiểm tra User (UserClient)
+   - Kiểm tra Products & Stock (ProductClient)
+   - Tính totalAmount và subtotal
+3. Gửi MapOrderRequest (Order + OrderDetails) → Order Service
+4. Order Service:
+   - Tạo Order trong database
+   - Tạo OrderDetails trong database
+   - Gọi ProductClient để decrease stock
+5. Trả về OrderDetailResponse (Order + All OrderDetails)
 ```
 
 ## Công nghệ sử dụng
@@ -100,6 +127,8 @@ OrderDetail Service ──(Internal API)──┬──► Order Service
 - **Spring Cloud Netflix Eureka**: Service Discovery
 - **Spring Cloud OpenFeign**: Declarative REST Client
 - **Spring Cloud LoadBalancer**: Client-side load balancing
+- **Clent Server (Orchestrator/BFF)**: 
+
 
 ### Security
 - **Spring Security**: Authentication & Authorization
@@ -119,6 +148,43 @@ OrderDetail Service ──(Internal API)──┬──► Order Service
 - **Lombok**: Reduce boilerplate code
 - **Validation API**: Request validation
 - **Spring Boot Actuator**: Monitoring & Health check
+
+## Client Server (Orchestrator / BFF)
+
+- Vai trò:
+  - Điều phối (orchestration) nhiều microservice để hoàn tất một nghiệp vụ end-to-end.
+  - Lớp BFF đứng giữa API Gateway và các Business Service (User/Order/Product).
+  - Tập trung xác thực/ủy quyền (JWT, @PreAuthorize), chuẩn hóa lỗi, biến đổi dữ liệu, logging.
+
+- Vì sao cần:
+  - Nếu để một service domain tự gọi nhiều service khác, flow sẽ rối, khó debug và khó bảo trì.
+  - Orchestrator tách logic điều phối khỏi domain service, giúp mỗi service tập trung vào nghiệp vụ cốt lõi.
+  - Frontend chỉ cần gọi 1 API; lỗi được chuẩn hóa một chỗ.
+
+- Cách hoạt động (ví dụ tạo đơn hàng):
+  1) Kiểm tra user (User Service)
+  2) Lấy/validate sản phẩm, tính tiền (Product Service)
+  3) Tạo đơn (Order Service)
+  4) Giảm tồn kho (Product Service)
+  - Toàn bộ lỗi từ các service được parse qua FeignErrorDecoder và trả về theo ErrorResponse thống nhất.
+
+- Ưu điểm:
+  - Tập trung flow nghiệp vụ → dễ quan sát, debug, logging.
+  - Chuẩn hóa lỗi và bảo mật tập trung.
+  - Giảm số lần gọi từ frontend, dữ liệu được “enrich” trước khi gửi sang service đích.
+  - Dễ áp dụng bù trừ (compensation) như hủy đơn hoàn kho.
+
+- Nhược điểm:
+  - Có thể trở thành điểm nghẽn/điểm lỗi đơn (cần scale và LB).
+  - Tăng độ trễ do nhiều network hops.
+  - Ràng buộc chặt với hợp đồng API của các service; cần chiến lược bù trừ khi một bước thất bại.
+  - Nguy cơ “God Object” nếu dồn quá nhiều logic vào một nơi (nên tách theo use case/domain).
+
+- Khi nên dùng:
+  - Flow đa bước, cần kiểm soát thứ tự/điều kiện, cần error handling và bảo mật thống nhất.
+
+- Khi cân nhắc giải pháp khác:
+  - Hệ thống throughput rất cao hoặc thiên về event-driven → ưu tiên Choreography (publish/subcribe).
 
 ## Best Practices Implemented
 
@@ -198,238 +264,153 @@ mvn test
 ## Chi tiết các Service
 
 ### 1. API Gateway (Port: 8083)
-- **Chức năng**: Entry point cho toàn bộ hệ thống
-- **Routing**:
-  - `/api/v1/auth/**` → Auth Service (8081)
-  - `/api/v1/**` → Client Server (8087)
-- **Công nghệ**: Spring Cloud Gateway
-- **Load balancing**: Tích hợp với Eureka
+- **Entry point** cho toàn bộ hệ thống
+- **Routing**: `/api/v1/auth/**` → Auth Service | `/api/v1/**` → Client Server
+- **Load balancing** tích hợp Eureka
 
 ### 2. Discovery Server (Port: 8761)
-- **Chức năng**: Service registry và discovery
-- **Công nghệ**: Eureka Server
-- **URL Dashboard**: http://localhost:8761
-- **Tính năng**:
-  - Đăng ký service
-  - Health monitoring
-  - Load balancing
+- **Eureka Server** - Service registry & discovery
+- **Dashboard**: http://localhost:8761
 
-### 3. Auth Service (Port: 8081)
-- **Chức năng**: Xác thực và phân quyền
-- **API Endpoints**:
-  - `POST /api/v1/auth/register` - Đăng ký tài khoản
-  - `POST /api/v1/auth/login` - Đăng nhập
-  - `POST /api/v1/auth/refresh` - Refresh token
-  - `GET /api/v1/auth/verify` - Xác thực token
-- **Dependencies**: 
-  - UserClient → User Service (Internal API)
-- **Security**: JWT Token Generation
+### 3. Auth Service (Port: 8086)
+**Chức năng**: Xác thực và tạo JWT Token
+
+**API Endpoints**:
+- `POST /api/v1/auth/register` - Đăng ký tài khoản
+- `POST /api/v1/auth/login` - Đăng nhập (trả về JWT)
+- `POST /api/v1/auth/refresh` - Refresh token
+
+**Dependencies**: UserClient → User Service (Internal API)
+
+**Security**: ❌ KHÔNG có Spring Security
 
 ### 4. Client Server (Port: 8087)
-- **Chức năng**: API Orchestrator - Lớp trung gian xử lý nghiệp vụ
-- **Vai trò**:
-  - Nhận request từ API Gateway
-  - Xác thực JWT token
-  - Kiểm tra phân quyền (@PreAuthorize)
-  - Forward request đến service tương ứng
-- **FeignClient**:
-  - UserClient → User Service
-  - OrderClient → Order Service
-  - ProductClient → Product Service
-  - AuthClient → Auth Service (verify token)
-- **Security**: JWT Validation, Role-based Authorization
+**Chức năng**: API Orchestrator - Xử lý nghiệp vụ
+
+**Vai trò**:
+- Nhận request từ API Gateway
+- Xác thực JWT token
+- Kiểm tra phân quyền (`@PreAuthorize`)
+- Validate business logic (check product stock, calculate total)
+- Forward request đến service tương ứng
+- **FeignClient Error Handling** - Catch và format errors từ services
+
+**FeignClient**: UserClient, OrderClient, ProductClient
+
+**Error Handling**:
+- `FeignErrorDecoder` - Parse errors từ microservices
+- `GlobalExceptionHandler` - Catch và format error response
+- Custom Exceptions: `BadRequestException`, `ResourceNotFoundException`, `InsufficientStockException`
 
 ### 5. User Service (Port: 8082)
-- **Chức năng**: Quản lý thông tin người dùng
-- **Public API** (`/api/v1/users`):
-  - `GET /api/v1/users/{id}` - Lấy thông tin user
-  - `GET /api/v1/users/{userId}/orders` - Lấy đơn hàng của user
-  - `PUT /api/v1/users/{id}` - Cập nhật user
-  - `DELETE /api/v1/users/{id}` - Xóa user
-- **Internal API** (`/api/internal/users`):
-  - `POST /api/internal/users` - Tạo user (từ Auth Service)
-  - `GET /api/internal/users/by-username/{username}` - Lấy user theo username
-  - `GET /api/internal/users/check-role/{userId}` - Kiểm tra role
-- **Dependencies**: 
-  - OrderClient → Order Service (Internal API)
-- **Database**: PostgreSQL (userdb)
+**Chức năng**: Quản lý người dùng
 
-### 6. Order Service (Port: 8083)
-- **Chức năng**: Quản lý đơn hàng
-- **Public API** (`/api/v1/orders`):
-  - `POST /api/v1/orders` - Tạo đơn hàng
-  - `GET /api/v1/orders/{id}` - Chi tiết đơn hàng
-  - `GET /api/v1/orders/user/{userId}` - Đơn hàng của user
-  - `GET /api/v1/orders/statistics/by-user/{userId}` - Thống kê
-  - `DELETE /api/v1/orders/{id}` - Xóa đơn hàng
-- **Internal API** (`/api/internal/orders`):
-  - `PUT /api/internal/orders/{orderId}/increase-total` - Tăng tổng tiền
-  - `PUT /api/internal/orders/{orderId}/decrease-total` - Giảm tổng tiền
-  - `DELETE /api/internal/orders/{orderId}` - Xóa đơn (internal)
-- **Dependencies**: 
-  - UserClient → User Service (Internal API)
-- **Database**: PostgreSQL (orderdb)
+**Public API**:
+- `GET /api/v1/users/{id}` - Chi tiết user
+- `PUT /api/v1/users/{id}` - Cập nhật
+- `DELETE /api/v1/users/{id}` - Xóa (ADMIN)
 
-### 7. Order Detail Service (Port: 8084)
-- **Chức năng**: Quản lý chi tiết đơn hàng (sản phẩm trong đơn)
-- **API Endpoints**:
-  - `POST /api/v1/order-details` - Thêm sản phẩm vào đơn
-  - `PUT /api/v1/order-details/{id}` - Cập nhật số lượng
-  - `DELETE /api/v1/order-details/{id}` - Xóa sản phẩm khỏi đơn
-  - `GET /api/v1/order-details/statistics/top-products` - Top sản phẩm bán chạy
-- **Dependencies**: 
-  - OrderClient → Order Service (Internal API)
-  - ProductClient → Product Service (Internal API)
-- **Business Logic**:
-  - Thêm sản phẩm → Trừ kho + Tăng tổng tiền đơn
-  - Xóa sản phẩm → Tăng kho + Giảm tổng tiền đơn
-- **Database**: PostgreSQL (orderdetaildb)
+**Internal API**:
+- `POST /api/internal/users` - Tạo user (từ Auth)
+- `GET /api/internal/users/by-username/{username}` - Lấy user theo username
 
-### 8. Product Service (Port: 8085)
-- **Chức năng**: Quản lý sản phẩm và kho
-- **Public API** (`/api/v1/products`):
-  - `POST /api/v1/products/insert` - Tạo sản phẩm
-  - `GET /api/v1/products/{id}` - Chi tiết sản phẩm
-  - `PUT /api/v1/products/{id}` - Cập nhật sản phẩm
-  - `DELETE /api/v1/products/{id}` - Xóa sản phẩm
-  - `GET /api/v1/products/search` - Tìm kiếm sản phẩm
-- **Internal API** (`/api/internal/products`):
-  - `PUT /api/internal/products/{productId}/decrease-stock` - Trừ kho
-  - `PUT /api/internal/products/{productId}/increase-stock` - Tăng kho
-- **Database**: PostgreSQL (productdb)
+**Security**: ❌ KHÔNG có Spring Security (Business Service)
 
-## Luồng xử lý chính
+**Database**: userdb (PostgreSQL)
 
-### 1. Đăng ký tài khoản
-```
-1. Client → POST /api/v1/auth/register
-2. API Gateway → Auth Service
-3. Auth Service → UserClient.create()
-4. User Service (Internal API) → Tạo user trong DB
-5. Response: UserResponse
-```
+### 6. Order Service (Port: 8081)
+**Chức năng**: Quản lý đơn hàng và chi tiết đơn hàng (đã gộp OrderDetail)
 
-### 2. Đăng nhập
-```
-1. Client → POST /api/v1/auth/login
-2. API Gateway → Auth Service
-3. Auth Service → UserClient.getByUserName()
-4. User Service (Internal API) → Lấy thông tin user
-5. Auth Service → Xác thực password + Tạo JWT Token
-6. Response: JwtTokenResponse (accessToken, refreshToken)
-```
+**Public API** (via Client Server):
+- `POST /api/v1/orders` - Tạo đơn hàng (bao gồm order details)
+- `GET /api/v1/orders/{id}` - Chi tiết đơn hàng (Order + OrderDetails)
+- `GET /api/v1/orders/user/{userId}` - Đơn hàng của user
+- `DELETE /api/v1/orders/{id}` - Xóa đơn hàng (ADMIN)
 
-### 3. Gọi API nghiệp vụ (ví dụ: Lấy thông tin user)
-```
-1. Client → GET /api/v1/users/{id} (với JWT trong header)
-2. API Gateway → Client Server
-3. Client Server:
-   - Xác thực JWT token
-   - Kiểm tra role (@PreAuthorize)
-   - Forward: UserClient.getUser(id)
-4. User Service → Truy vấn DB
-5. Response: UserResponse
-```
+**Internal API**:
+- `GET /api/internal/orders/{id}` - Lấy order với details
+- `POST /api/internal/orders` - Tạo order (nhận MapOrderRequest với OrderItemDetail)
 
-### 4. Tạo đơn hàng
-```
-1. Client → POST /api/v1/orders (với JWT)
-2. API Gateway → Client Server
-3. Client Server → OrderClient.createOrder()
-4. Order Service:
-   - Xác thực user (UserClient)
-   - Tạo đơn hàng trong DB
-5. Response: Order ID
-```
+**Models**:
+- `Order` - Thông tin đơn hàng
+- `OrderDetail` - Chi tiết sản phẩm trong đơn (gộp vào Order Service)
 
-### 5. Thêm sản phẩm vào đơn hàng
-```
-1. Client → POST /api/v1/order-details
-2. OrderDetail Service:
-   - ProductClient.decreaseStock() → Trừ kho sản phẩm
-   - OrderClient.increaseTotalAmount() → Tăng tổng tiền đơn
-   - Lưu chi tiết đơn hàng
-3. Response: OrderDetail created
-```
+**Business Logic**:
+- Nhận `MapOrderRequest` từ Client Server (đã có đầy đủ thông tin: totalAmount, subtotal)
+- Tạo Order trong database
+- Tạo OrderDetails trong database
+- Gọi ProductClient để decrease stock
+- Trả về OrderDetailResponse (Order + All OrderDetails)
 
-### 6. Xóa sản phẩm khỏi đơn hàng
-```
-1. Client → DELETE /api/v1/order-details/{id}
-2. OrderDetail Service:
-   - ProductClient.increaseStock() → Hoàn kho
-   - OrderClient.decreaseTotalAmount() → Giảm tổng tiền
-   - Xóa chi tiết đơn
-3. Response: Success
-```
+**Security**: ❌ KHÔNG có Spring Security
+
+**Database**: orderdb (PostgreSQL) - bao gồm 2 tables: `orders`, `order_details`
+
+### 7. Product Service (Port: 8084)
+**Chức năng**: Quản lý sản phẩm và kho
+
+**Public API** (via Client Server):
+- `POST /api/v1/products/insert` - Tạo sản phẩm (ADMIN)
+- `GET /api/v1/products/{id}` - Chi tiết sản phẩm
+- `PUT /api/v1/products/{id}` - Cập nhật (ADMIN)
+- `DELETE /api/v1/products/{id}` - Xóa (ADMIN)
+- `GET /api/v1/products/search` - Tìm kiếm sản phẩm
+
+**Internal API**:
+- `GET /api/internal/products/{id}` - Lấy thông tin product
+- `PATCH /api/internal/products/{productId}/decrease-stock?quantity=X` - Trừ kho
+- `PATCH /api/internal/products/{productId}/increase-stock?quantity=X` - Tăng kho
+
+**Error Handling**:
+- `ResourceNotFoundException` - Product not found
+- `InsufficientStockException` - Không đủ hàng
+- `BadRequestException` - Invalid input
+
+**Security**: ❌ KHÔNG có Spring Security
+
+**Database**: productdb (PostgreSQL)
 
 ## Cài đặt và Chạy
 
-### Yêu cầu hệ thống
+### Yêu cầu
 - Java 21+
 - Maven 3.8+
-- Docker và Docker Compose
-- PostgreSQL
+- Docker & Docker Compose
 
-### Các bước cài đặt
+### Chạy hệ thống
 
-#### 1. Clone repository
 ```bash
+# 1. Clone repository
 git clone <repository-url>
-cd training-microservice
-```
+cd Microservice-be
 
-#### 2. Build các service
-```bash
-# Build tất cả service
+# 2. Build tất cả service
 mvn clean package -DskipTests
 
-# Hoặc build từng service
-cd auth-service && mvn clean package -DskipTests
-cd ../user-service && mvn clean package -DskipTests
-cd ../order-service && mvn clean package -DskipTests
-cd ../orderdetail-service && mvn clean package -DskipTests
-cd ../product-service && mvn clean package -DskipTests
-cd ../client-server && mvn clean package -DskipTests
-cd ../api-gateway && mvn clean package -DskipTests
-cd ../discovery-server && mvn clean package -DskipTests
-```
-
-#### 3. Chạy với Docker Compose
-```bash
+# 3. Chạy Docker Compose
 docker-compose up -d
-```
 
-#### 4. Kiểm tra trạng thái
-```bash
-# Xem logs
+# 4. Xem logs
 docker-compose logs -f
 
-# Kiểm tra containers đang chạy
-docker ps
+# 5. Kiểm tra Eureka Dashboard
+# http://localhost:8761
 ```
 
-### Kiểm tra hoạt động
-- Eureka Dashboard: http://localhost:8761
-- API Gateway: http://localhost:8083
-- Auth Service: http://localhost:8081
-- Client Server: http://localhost:8087
-- User Service: http://localhost:8082
-- Order Service: http://localhost:8083
-- Product Service: http://localhost:8085
-
 ### Dừng hệ thống
+
 ```bash
+# Dừng containers
 docker-compose down
 
-# Xóa volumes (reset database)
+# Reset database
 docker-compose down -v
 ```
 
-## APIs
+## API Examples
 
-### Auth Service (via API Gateway: http://localhost:8083)
+### 1. Authentication
 
-#### Authentication
 ```bash
 # Đăng ký
 POST http://localhost:8083/api/v1/auth/register
@@ -438,563 +419,314 @@ Content-Type: application/json
   "username": "admin",
   "password": "admin123",
   "email": "admin@example.com",
-  "role": "ADMIN"
+  "firstName": "Admin",
+  "lastName": "User",
+  "roleId": 1
 }
 
 # Đăng nhập
 POST http://localhost:8083/api/v1/auth/login
 Content-Type: application/json
 {
-  "username": "admin",
+  "userName": "admin",
   "password": "admin123"
 }
 
-# Refresh Token
-POST http://localhost:8083/api/v1/auth/refresh
-Content-Type: application/json
+# Response
 {
-  "refreshToken": "<refresh_token>"
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+  "expiresIn": 3600
 }
-
-# Verify Token
-GET http://localhost:8083/api/v1/auth/verify
-Authorization: Bearer <access_token>
 ```
 
-### User Service (via Client Server)
+### 2. User Management
+
 ```bash
 # Lấy thông tin user (ADMIN or USER)
-GET http://localhost:8083/api/v1/users/{id}
+GET http://localhost:8083/api/v1/users/1
 Authorization: Bearer <access_token>
 
-# Lấy user với đơn hàng (ADMIN or USER)
-GET http://localhost:8083/api/v1/users/{userId}/orders
-Authorization: Bearer <access_token>
-
-# Cập nhật user (ADMIN or USER)
-PUT http://localhost:8083/api/v1/users/{id}
+# Cập nhật user
+PUT http://localhost:8083/api/v1/users/1
 Authorization: Bearer <access_token>
 Content-Type: application/json
 {
-  "username": "newusername",
-  "email": "newemail@example.com"
+  "firstName": "Updated",
+  "lastName": "Name",
+  "email": "updated@example.com"
 }
-
-# Xóa user (ADMIN only)
-DELETE http://localhost:8083/api/v1/users/{id}
-Authorization: Bearer <access_token>
 ```
 
-### Product Service (via Client Server)
+### 3. Product Management
+
 ```bash
 # Tạo sản phẩm (ADMIN only)
 POST http://localhost:8083/api/v1/products/insert
 Authorization: Bearer <access_token>
 Content-Type: application/json
 {
-  "name": "Product Name",
-  "description": "Description",
-  "price": 100000,
-  "stock": 50
+  "name": "Laptop Dell XPS 15",
+  "description": "High performance laptop",
+  "price": 35000000,
+  "stock": 50,
+  "categoryId": 1
 }
-
-# Lấy chi tiết sản phẩm
-GET http://localhost:8083/api/v1/products/{id}
-Authorization: Bearer <access_token>
-
-# Cập nhật sản phẩm (ADMIN only)
-PUT http://localhost:8083/api/v1/products/{id}
-Authorization: Bearer <access_token>
-Content-Type: application/json
-{
-  "name": "Updated Name",
-  "price": 120000,
-  "stock": 100
-}
-
-# Xóa sản phẩm (ADMIN only)
-DELETE http://localhost:8083/api/v1/products/{id}
-Authorization: Bearer <access_token>
 
 # Tìm kiếm sản phẩm
-GET http://localhost:8083/api/v1/products/search?keyword=laptop&page=1&size=10
+GET http://localhost:8083/api/v1/products/search?keyword=laptop&page=0&size=10
 Authorization: Bearer <access_token>
 ```
 
-### Order Service (via Client Server)
+### 4. Order Management
+
 ```bash
-# Tạo đơn hàng (USER)
+# Tạo đơn hàng (bao gồm order details)
 POST http://localhost:8083/api/v1/orders
 Authorization: Bearer <access_token>
 Content-Type: application/json
 {
-  "userId": 1
+  "fullName": "Nguyen Van A",
+  "phone": "0123456789",
+  "shippingAddress": "123 ABC Street, Ho Chi Minh",
+  "paymentMethod": "COD",
+  "note": "Giao hang nhanh",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2
+    },
+    {
+      "productId": 2,
+      "quantity": 1
+    }
+  ]
 }
 
-# Lấy chi tiết đơn hàng (ADMIN or USER)
-GET http://localhost:8083/api/v1/orders/{id}
+# Response (OrderDetailResponse):
+{
+  "code": 201,
+  "message": "Order created successfully",
+  "data": {
+    "orderId": 1,
+    "fullName": "Nguyen Van A",
+    "phone": "0123456789",
+    "shippingAddress": "123 ABC Street, Ho Chi Minh",
+    "status": "PENDING",
+    "totalAmount": 55000000,
+    "orderDate": "2025-10-25T10:30:00",
+    "items": [
+      {
+        "orderDetailId": 1,
+        "productId": 1,
+        "productName": "iPhone 15",
+        "quantity": 2,
+        "price": 20000000,
+        "subtotal": 40000000
+      },
+      {
+        "orderDetailId": 2,
+        "productId": 2,
+        "productName": "Samsung S24",
+        "quantity": 1,
+        "price": 15000000,
+        "subtotal": 15000000
+      }
+    ]
+  }
+}
+
+# Lấy chi tiết đơn hàng (Order + OrderDetails)
+GET http://localhost:8083/api/v1/orders/1
 Authorization: Bearer <access_token>
 
-# Lấy đơn hàng của user (ADMIN or USER)
-GET http://localhost:8083/api/v1/orders/user/{userId}
-Authorization: Bearer <access_token>
-
-# Thống kê đơn hàng (ADMIN)
-GET http://localhost:8083/api/v1/orders/statistics/by-user/{userId}
-Authorization: Bearer <access_token>
-
-# Xóa đơn hàng (ADMIN)
-DELETE http://localhost:8083/api/v1/orders/{id}
+# Lấy tất cả đơn hàng của user
+GET http://localhost:8083/api/v1/orders/user/1
 Authorization: Bearer <access_token>
 ```
 
-## Security
+## Error Handling
 
-### JWT Authentication
-- **Access Token**: Thời gian sống ngắn (15-30 phút)
-- **Refresh Token**: Thời gian sống dài (7-30 ngày)
-- **Token Header**: `Authorization: Bearer <token>`
+### Error Response Format
 
-### Role-based Authorization
-- **ADMIN**: Toàn quyền quản lý (CRUD tất cả)
-- **USER**: Quyền hạn giới hạn (xem và tạo đơn hàng của mình)
-
-### Internal API Security
-- **API Key Authentication**: Service-to-service communication
-- **Header**: `X-Internal-API-Key: <secret-key>`
-- **Bảo vệ**: Chỉ cho phép các service nội bộ gọi `/api/internal/**`
-
-### Security Configuration
-```yaml
-# application.yml hoặc application.properties
-internal:
-  api:
-    key: ${INTERNAL_API_KEY:your-secret-internal-key}
+```json
+{
+  "timestamp": "2025-10-25T10:30:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Product not found with id=999",
+  "path": "/api/v1/products/999"
+}
 ```
 
-## Xử lý lỗi thường gặp
+### Common Error Codes
 
-### 1. Lỗi 401 Unauthorized khi service gọi Internal API
+| Status | Error | Mô tả |
+|--------|-------|-------|
+| 400 | Bad Request | Invalid input data, validation failed |
+| 401 | Unauthorized | Missing or invalid JWT token |
+| 403 | Forbidden | Không có quyền truy cập resource |
+| 404 | Not Found | Resource không tồn tại |
+| 409 | Conflict | Insufficient stock, business rule violation |
+| 500 | Internal Server Error | Unexpected server error |
 
-**Triệu chứng:**
-```
-Remote service error: [401] during [GET] to 
-[http://user-service/api/internal/users/by-username/xxx]
-```
+### FeignClient Error Handling
 
-**Nguyên nhân**: 
-- FeignClient không có API Key khi gọi Internal API
-- Security Filter chặn request không có header `X-Internal-API-Key`
+**Client Server** sử dụng `FeignErrorDecoder` để parse errors từ microservices:
 
-**Giải pháp:**
-
-#### Bước 1: Tạo FeignConfig cho service gọi Internal API
 ```java
-// Ví dụ: auth-service/config/FeignConfig.java
-@Configuration
-public class FeignConfig {
-    @Value("${internal.api.key}")
-    private String internalApiKey;
-
-    @Bean
-    public RequestInterceptor requestInterceptor() {
-        return requestTemplate -> {
-            if (requestTemplate.path().contains("/api/internal/")) {
-                requestTemplate.header("X-Internal-API-Key", internalApiKey);
-            }
+@Component
+public class FeignErrorDecoder implements ErrorDecoder {
+    @Override
+    public Exception decode(String methodKey, Response response) {
+        // Parse error từ Product/Order/User Service
+        return switch (response.status()) {
+            case 400 -> new BadRequestException(message);
+            case 404 -> new ResourceNotFoundException(message);
+            case 409 -> new InsufficientStockException(message);
+            default -> new RuntimeException(message);
         };
     }
 }
 ```
 
-#### Bước 2: Thêm FeignConfig vào FeignClient
-```java
-@FeignClient(name="user-service", 
-             path="/api/internal/users", 
-             configuration = FeignConfig.class)
-public interface UserClient {
-    // ...
-}
-```
+**GlobalExceptionHandler** catch và format error response:
 
-#### Bước 3: Tạo InternalApiKeyFilter cho service nhận Internal API
 ```java
-// Ví dụ: user-service/config/InternalApiKeyFilter.java
-@Component
-public class InternalApiKeyFilter extends OncePerRequestFilter {
-    @Value("${internal.api.key}")
-    private String internalApiKey;
-
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, 
-                                   HttpServletResponse response, 
-                                   FilterChain filterChain) 
-            throws ServletException, IOException {
-        
-        if (request.getRequestURI().startsWith("/api/internal/")) {
-            String apiKey = request.getHeader("X-Internal-API-Key");
-            
-            if (apiKey == null || !apiKey.equals(internalApiKey)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("{\"error\":\"Invalid API Key\"}");
-                return;
-            }
-        }
-        
-        filterChain.doFilter(request, response);
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientStock(
+            InsufficientStockException ex) {
+        // Format và trả về error cho client
     }
 }
 ```
 
-#### Bước 4: Thêm Filter vào SecurityConfig
-```java
-@Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http) {
-    http
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/internal/**").permitAll()
-            .anyRequest().authenticated()
-        )
-        .addFilterBefore(internalApiKeyFilter, 
-                        UsernamePasswordAuthenticationFilter.class);
-    return http.build();
+### Example Error Responses
+
+**Insufficient Stock:**
+```bash
+POST http://localhost:8083/api/v1/orders
+
+Response:
+{
+  "timestamp": "2025-10-25T10:31:00",
+  "status": 409,
+  "error": "Insufficient Stock",
+  "message": "Không đủ số lượng hàng cho sản phẩm 'iPhone 15': có sẵn 10, yêu cầu 100",
+  "path": "/api/v1/orders"
 }
 ```
 
-#### Bước 5: Cấu hình API Key trong application.yml
-```yaml
-internal:
-  api:
-    key: ${INTERNAL_API_KEY:my-secret-key-change-in-production}
-```
-
-#### Bước 6: Cấu hình Docker Compose
-```yaml
-services:
-  auth-service:
-    environment:
-      INTERNAL_API_KEY: "my-super-secret-key-2024"
-  
-  user-service:
-    environment:
-      INTERNAL_API_KEY: "my-super-secret-key-2024"
-  # ... các service khác
-```
-
-### 2. Lỗi Connection Refused
-
-**Giải pháp:**
-- Kiểm tra Eureka Dashboard: http://localhost:8761
-- Đảm bảo tất cả service đã đăng ký
-- Kiểm tra network trong Docker Compose
-
-### 3. Lỗi JWT Token Invalid
-
-**Giải pháp:**
-- Kiểm tra `jwt.secretKey` giống nhau giữa auth-service và client-server
-- Kiểm tra token chưa hết hạn
-- Kiểm tra format header: `Authorization: Bearer <token>`
-
-### 4. Database Connection Error
-
-**Giải pháp:**
+**Product Not Found:**
 ```bash
-# Kiểm tra PostgreSQL đang chạy
-docker ps | grep postgres
+GET http://localhost:8083/api/v1/products/999
 
-# Xem logs database
-docker-compose logs postgres
-
-# Reset database
-docker-compose down -v
-docker-compose up -d
+Response:
+{
+  "timestamp": "2025-10-25T10:30:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Product not found with id=999",
+  "path": "/api/v1/products/999"
+}
 ```
 
-## Monitoring & Logging
+## Security Architecture
 
-### Eureka Dashboard
-- URL: http://localhost:8761
-- Xem trạng thái tất cả services
-- Kiểm tra health status
-- Load balancing info
+### JWT Authentication
+- **Access Token**: Thời gian sống 1 giờ
+- **Refresh Token**: Thời gian sống 7 ngày
+- **Header**: `Authorization: Bearer <token>`
 
-### Application Logs
-```bash
-# Xem logs tất cả service
-docker-compose logs -f
+### Role-based Authorization
+| Role | Quyền hạn |
+|------|-----------|
+| **ADMIN** | Toàn quyền CRUD tất cả resources |
+| **USER** | Xem và quản lý thông tin cá nhân, tạo đơn hàng |
 
-# Xem logs một service cụ thể
-docker-compose logs -f auth-service
-docker-compose logs -f user-service
-docker-compose logs -f client-server
+### Internal API Security
+- **KHÔNG dùng API Key** - Business Services không có Spring Security
+- **Network Isolation** - Chỉ accessible trong Docker network
+- **Separate Endpoints** - `/api/internal/**` vs `/api/v1/**`
 
-# Xem logs realtime
-docker-compose logs -f --tail=100 auth-service
-```
+**Lý do**: Auth Service + Client Server đã xử lý authentication/authorization, các Business Services chỉ lo business logic.
 
-### Health Check Endpoints
-- Auth Service: http://localhost:8081/actuator/health
-- User Service: http://localhost:8082/actuator/health
-- Order Service: http://localhost:8083/actuator/health
-- Product Service: http://localhost:8085/actuator/health
-- Client Server: http://localhost:8087/actuator/health
+## Service Communication
 
-## Database Schema
-
-### Databases
-Mỗi service có database riêng (Database per Service pattern):
-
-| Service | Database | Port |
-|---------|----------|------|
-| User Service | userdb | 5432 |
-| Order Service | orderdb | 5432 |
-| OrderDetail Service | orderdetaildb | 5432 |
-| Product Service | productdb | 5432 |
-| Auth Service | authdb | 5432 |
-
-### Kết nối Database
-```yaml
-# docker-compose.yml
-postgres:
-  image: postgres:15
-  environment:
-    POSTGRES_USER: admin
-    POSTGRES_PASSWORD: admin123
-  ports:
-    - "5432:5432"
-```
-
-## Service Communication Matrix
-
-| From Service | To Service | Type | API Path | Auth Method |
-|--------------|------------|------|----------|-------------|
-| Auth Service | User Service | Internal | /api/internal/users | API Key |
-| Client Server | User Service | Public | /api/v1/users | JWT Token |
-| Client Server | Order Service | Public | /api/v1/orders | JWT Token |
-| Client Server | Product Service | Public | /api/v1/products | JWT Token |
-| Client Server | Auth Service | Public | /api/v1/auth/verify | JWT Token |
-| Order Service | User Service | Internal | /api/internal/users | API Key |
-| OrderDetail Service | Order Service | Internal | /api/internal/orders | API Key |
-| OrderDetail Service | Product Service | Internal | /api/internal/products | API Key |
-| User Service | Order Service | Internal | /api/internal/orders | API Key |
+| From | To | Type | Path | Auth |
+|------|----|----|------|------|
+| Auth Service | User Service | Internal | `/api/internal/users` | No Security |
+| Client Server | User/Order/Product | Public | `/api/v1/**` | JWT Token (validated) |
+| Order Service | Product Service | Internal | `/api/internal/products/{id}/decrease-stock` | No Security |
 
 ## Port Summary
 
-| Service | Port | Description |
-|---------|------|-------------|
-| API Gateway | 8083 | Entry point cho client |
-| Discovery Server | 8761 | Eureka Server |
-| Auth Service | 8081 | Authentication & Authorization |
-| User Service | 8082 | User Management |
-| Order Service | 8083 | Order Management |
-| OrderDetail Service | 8084 | Order Detail Management |
-| Product Service | 8085 | Product & Inventory |
-| Client Server | 8087 | API Orchestrator |
-| PostgreSQL | 5432 | Database |
+| Service | Port | Exposed | Database |
+|---------|------|---------|----------|
+| API Gateway | 8083 | ✅ | - |
+| Discovery Server | 8761 | ✅ | - |
+| Auth Service | 8086 | ❌ (via Gateway) | - |
+| User Service | 8082 | ❌ | userdb |
+| Order Service | 8081 | ❌ | orderdb (orders + order_details) |
+| Product Service | 8084 | ❌ | productdb |
+| Client Server | 8087 | ❌ (via Gateway) | - |
+| PostgreSQL | 5433 | ❌ | 1 DB cho tất cả services |
 
-## Troubleshooting Guide
+**Chỉ API Gateway và Eureka được expose ra ngoài để đảm bảo security.**
 
-### Service không đăng ký với Eureka
+## Cần bổ sung
 
-**Kiểm tra:**
-```bash
-# 1. Xem logs của service
-docker-compose logs -f <service-name>
+### Phase 2 - In Progress
+- [x] ✅ Gộp OrderDetail vào Order Service
+- [x] ✅ FeignClient Error Handling
+- [x] ✅ Global Exception Handler
+- [x] ✅ Order creation với validation đầy đủ
+- [ ] Unit Tests cho các services
+- [ ] Integration Tests
 
-# 2. Kiểm tra Eureka Dashboard
-# Truy cập: http://localhost:8761
-# Xem phần "Instances currently registered with Eureka"
-
-# 3. Kiểm tra network
-docker network inspect training-microservice_default
-```
-
-**Giải pháp:**
-- Đảm bảo `eureka.client.service-url.defaultZone` đúng
-- Kiểm tra service có cùng Docker network
-- Restart service: `docker-compose restart <service-name>`
-
-### FeignClient Timeout
-
-**Giải pháp:** Tăng timeout trong application.yml
-```yaml
-feign:
-  client:
-    config:
-      default:
-        connectTimeout: 5000
-        readTimeout: 5000
-```
-
-### Port đã được sử dụng
-
-**Giải pháp:**
-```bash
-# Kiểm tra port đang sử dụng (Windows)
-netstat -ano | findstr :8083
-
-# Kill process (Windows - chạy với quyền admin)
-taskkill /PID <PID> /F
-
-# Hoặc thay đổi port trong application.yml
-server:
-  port: 8084  # thay đổi port
-```
-
-### Rebuild sau khi thay đổi code
-
-```bash
-# 1. Stop containers
-docker-compose down
-
-# 2. Rebuild images
-docker-compose build --no-cache
-
-# 3. Start lại
-docker-compose up -d
-
-# 4. Xem logs
-docker-compose logs -f
-```
-
-## Development Guide
-
-### Thêm một service mới
-
-1. **Tạo Spring Boot project** với dependencies:
-   - Spring Web
-   - Spring Cloud Netflix Eureka Client
-   - Spring Cloud OpenFeign
-   - PostgreSQL Driver
-   - Lombok
-
-2. **Cấu hình application.yml**
-```yaml
-spring:
-  application:
-    name: new-service
-server:
-  port: 8088
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-```
-
-3. **Thêm @EnableDiscoveryClient** vào main class
-```java
-@SpringBootApplication
-@EnableDiscoveryClient
-public class NewServiceApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(NewServiceApplication.class, args);
-    }
-}
-```
-
-4. **Thêm vào docker-compose.yml**
-```yaml
-new-service:
-  build: ./new-service
-  ports:
-    - "8088:8088"
-  environment:
-    SPRING_PROFILES_ACTIVE: docker
-    EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
-  depends_on:
-    - discovery-server
-    - postgres
-```
-
-5. **Cập nhật API Gateway routes** (nếu cần)
-
-## Contributing
-
-### Quy tắc commit
-- `feat:` Thêm tính năng mới
-- `fix:` Sửa bug
-- `refactor:` Refactor code
-- `docs:` Cập nhật documentation
-- `test:` Thêm/sửa tests
-- `chore:` Cập nhật build, dependencies
-
-### Git Workflow
-```bash
-# 1. Tạo branch mới
-git checkout -b feature/ten-tinh-nang
-
-# 2. Commit changes
-git add .
-git commit -m "feat: thêm API tìm kiếm sản phẩm"
-
-# 3. Push to remote
-git push origin feature/ten-tinh-nang
-
-# 4. Tạo Pull Request
-```
-
-## Roadmap
-
-### Phase 1 - Current ✅
-- [x] Microservices architecture
-- [x] JWT Authentication
-- [x] Service Discovery (Eureka)
-- [x] API Gateway
-- [x] Internal API security
-
-### Phase 2 - Planned
-- [ ] Redis Cache for performance
-- [ ] Message Queue (RabbitMQ/Kafka)
-- [ ] Distributed Tracing (Zipkin)
+### Phase 3 - Planned
+- [ ] Redis Cache cho performance
+- [ ] Message Queue (RabbitMQ/Kafka) cho async processing
+- [ ] Distributed Tracing (Zipkin) để debug
 - [ ] Centralized Configuration (Spring Cloud Config)
 - [ ] API Rate Limiting
 
 ### Phase 3 - Future
 - [ ] Kubernetes deployment
-- [ ] CI/CD Pipeline
+### Phase 3 - Planned
+- [ ] Redis Cache for performance
+- [ ] Message Queue (RabbitMQ/Kafka)
+- [ ] Distributed Tracing (Zipkin)
+- [ ] Centralized Configuration (Spring Cloud Config)
+- [ ] API Rate Limiting
+- [ ] Kubernetes deployment
+- [ ] CI/CD Pipeline (GitHub Actions)
 - [ ] Monitoring (Prometheus + Grafana)
-- [ ] ELK Stack for logging
-- [ ] GraphQL API
+- [ ] ELK Stack cho centralized logging
 
 ## FAQ
 
-### Q: Tại sao cần Client Server?
-**A:** Client Server đóng vai trò API Orchestrator, xử lý:
-- JWT validation
-- Authorization kiểm tra
-- Request routing
-- Response aggregation
+**Q: Tại sao gộp OrderDetail vào Order Service?**  
+A: Order và OrderDetail luôn đi cùng nhau, việc tách riêng tạo thêm network overhead và complexity không cần thiết. Gộp lại giúp transaction đơn giản hơn.
 
-### Q: Khác biệt giữa Public API và Internal API?
-**A:**
-- **Public API** (`/api/v1/**`): Cho client gọi, yêu cầu JWT token
-- **Internal API** (`/api/internal/**`): Cho service gọi nhau, yêu cầu API Key
+**Q: Tại sao Business Services không có Spring Security?**  
+A: Auth Service + Client Server đã xử lý authentication/authorization. Business Services chỉ lo business logic, giảm complexity và separation of concerns.
 
-### Q: Tại sao mỗi service có database riêng?
-**A:** Database per Service pattern đảm bảo:
-- Loose coupling giữa services
-- Độc lập về technology stack
-- Dễ dàng scale từng service
-- Tránh single point of failure
+**Q: Internal API có an toàn không khi không có security?**  
+A: An toàn vì chỉ accessible trong Docker network, không expose port ra ngoài. Chỉ các services trong cùng network mới gọi được.
 
-### Q: Làm sao để scale một service?
-**A:**
-```bash
-# Scale user-service lên 3 instances
-docker-compose up -d --scale user-service=3
+**Q: Làm sao handle errors từ microservices?**  
+A: Sử dụng FeignErrorDecoder để parse errors từ services, sau đó GlobalExceptionHandler catch và format thành ErrorResponse chuẩn cho client.
 
-# Load balancing tự động qua Eureka + Ribbon
-```
+**Q: Order creation flow hoạt động thế nào?**  
+A: Client Server validate (check user, check products & stock, calculate total) → Gửi MapOrderRequest đến Order Service → Order Service tạo Order + OrderDetails → Gọi Product Service để decrease stock.
 
-## License
-MIT License
-
-## Contact
-- Author: [Your Name]
-- Email: [your.email@example.com]
-- GitHub: [github.com/yourusername]
+**Q: Làm sao scale service?**  
+A: `docker-compose up -d --scale user-service=3` - Load balancing tự động qua Eureka.
 
 ---
 
-**Cảm ơn bạn đã sử dụng hệ thống Microservice E-Commerce! 🚀**
+**🚀 Microservice E-Commerce System - Spring Boot + Spring Cloud**

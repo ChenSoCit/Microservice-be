@@ -5,6 +5,39 @@
 
 <mapper namespace="com.example.order_service.mappers.OrderMapper">
 
+    <!-- ===================================================== -->
+    <!-- =============== RESULT MAP - ORDER DETAIL ============ -->
+    <!-- ===================================================== -->
+    <resultMap id="OrderDetailResponseMap" type="com.example.order_service.dtos.response.OrderDetailResponse">
+        <!-- Map Order fields -->
+        <id property="id" column="order_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="fullName" column="full_name"/>
+        <result property="phone" column="phone"/>
+        <result property="shippingAddress" column="shipping_address"/>
+        <result property="paymentMethod" column="payment_method"/>
+        <result property="orderDate" column="order_date"/>
+        <result property="status" column="status" />
+        <result property="totalAmount" column="total_amount"/>
+        <result property="note" column="note"/>
+        <!-- Collection cho orderItems -->
+        <collection property="orderItems" 
+                    ofType="com.example.order_service.dtos.response.OrderItemResponse">
+            <id property="id" column="detail_id"/>
+            <result property="orderId" column="order_id"/>
+            <result property="productId" column="product_id"/>
+            <result property="quantity" column="quantity"/>
+            <result property="price" column="price"/>
+            <result property="subTotal" column="subtotal"/>
+            <result property="createdAt" column="detail_created_at"/>
+            <result property="updatedAt" column="detail_updated_at"/>
+        </collection>
+    </resultMap>
+
+
+    <!-- ===================================================== -->
+    <!-- ===================== INSERT ========================= -->
+    <!-- ===================================================== -->
     <insert id="createOrder"
             parameterType="com.example.order_service.models.Order"
             useGeneratedKeys="true"
@@ -12,134 +45,154 @@
         INSERT INTO orders (
             user_id,
             full_name,
-            email,
-            phone,
-            address,
             status,
-            total_money
-         
+            phone,
+            total_amount,
+            payment_method,
+            shipping_address,
+            order_date,
+            note
         ) VALUES (
-            #{userId},
-            #{fullName},
-            #{email},
-            #{phone},
-            #{address},
-            #{status},
-            #{totalMoney}
-        
-        )
+             #{userId},
+             #{fullName},
+             #{status},
+             #{phone},
+             #{totalAmount},
+             #{paymentMethod},
+             #{shippingAddress},
+             #{orderDate},
+             #{note}
+                 )
     </insert>
 
+    <!-- ===================================================== -->
+    <!-- ===================== SELECT ========================= -->
+    <!-- ===================================================== -->
     <select id="getOrderById"
+            parameterType="int" 
+            resultType="com.example.order_service.models.Order">
+        SELECT
+            id,
+            user_id AS userId,
+            full_name AS fullName,
+            phone,
+            shipping_address AS shippingAddress,
+            payment_method AS paymentMethod,
+            order_date AS orderDate,
+            status,
+            total_amount AS totalAmount,
+            note
+        FROM orders
+        WHERE id = #{id}
+    </select>
+
+    <select id="getAllOrderByUser"
             parameterType="int"
             resultType="com.example.order_service.models.Order">
 
         SELECT
-        id
-        ,user_id AS userId
-        ,order_date AS orderDate
-        ,status
-        ,total_money AS totalMoney
-
+            id,
+            user_id AS userId,
+            full_name AS fullName,
+            phone,
+            shipping_address AS shippingAddress,
+            payment_method AS paymentMethod,
+            order_date AS orderDate,
+            status,
+            total_amount AS totalAmount,
+            note
         FROM orders 
-
-        WHERE id = #{id}
-    </select>
-
-    <select id="getOrderByUserId"
-            parameterType="int"
-            resultType="com.example.order_service.dtos.response.OrderResponse">
-
-        SELECT
-        id
-        ,user_id AS userId
-        ,full_name AS fullName
-        ,email
-        ,phone
-        ,address
-        ,order_date AS orderDate
-        ,status
-        ,total_money AS totalMoney
-
-        FROM orders 
-
         WHERE user_id = #{userId}
-
+        ORDER BY order_date DESC
     </select>
 
+    <!-- ===================================================== -->
+    <!-- ===================== STATISTICS ===================== -->
+    <!-- ===================================================== -->
     <select id="statisOrder"
+            parameterType="int"
             resultType="com.example.order_service.dtos.response.CntOrderResponse">
 
         SELECT
-
-        COUNT(*) AS totalOrder
-        , COUNT(*) FILTER (WHERE status = 'PENDING')     AS statusPending
-        , COUNT(*) FILTER (WHERE status = 'DELIVERING')  AS statusDelivering
-        , COUNT(*) FILTER (WHERE status = 'COMPLETED')   AS statusCompleted
-        , COALESCE(SUM(total_money), 0) AS totalMoney
-
+            COUNT(*) AS totalOrder,
+            COUNT(*) FILTER (WHERE status = 'PENDING')     AS statusPending,
+            COUNT(*) FILTER (WHERE status = 'DELIVERING')  AS statusDelivering,
+            COUNT(*) FILTER (WHERE status = 'COMPLETED')   AS statusCompleted,
+            COALESCE(SUM(total_amount), 0) AS totalMoney
         FROM orders
-
         WHERE user_id = #{userId}
-    
     </select>
 
-    <delete id="deleteUser" parameterType="int">
-        DELETE FROM orders 
-        
+    <!--    thống kê theo từng ngày-->
+    <select id="getDailyStatistics" resultType="map">
+        SELECT
+            DATE(order_date) AS date,
+            COUNT(*) AS order_count,
+            COALESCE(SUM(total_amount), 0) AS total_amount
+        FROM orders
+        WHERE DATE(order_date) BETWEEN #{startDate} AND #{endDate}
+        GROUP BY DATE(order_date)
+        ORDER BY DATE(order_date)
+    </select>
+
+
+    <!-- Thống kê theo tuần trong tháng  -->
+    <select id="getWeeklyStatistics" resultType="map">
+        SELECT
+            (EXTRACT(WEEK FROM order_date) - EXTRACT(WEEK FROM DATE_TRUNC('month', order_date)) + 1) AS week_number,
+            COUNT(*) AS order_count,
+            COALESCE(SUM(total_amount), 0) AS total_amount
+        FROM orders
+        WHERE DATE(order_date) BETWEEN #{firstDay} AND #{lastDay}
+        GROUP BY week_number
+        ORDER BY week_number
+    </select>
+
+    <!-- ===================================================== -->
+    <!-- ===================== DELETE ========================= -->
+    <!-- ===================================================== -->
+    <delete id="deleteOrdersByUserId" parameterType="int">
+        DELETE FROM orders
         WHERE user_id = #{userId}
     </delete>
 
     <delete id="deleteOrder" parameterType="int">
         DELETE FROM orders
-
-        WHERE
-        id = #{id}
+        WHERE id = #{id}
     </delete>
 
-    <update id="decreaseTotalMoney" >
+    <!-- ===================================================== -->
+    <!-- ===================== UPDATE ========================= -->
+    <!-- ===================================================== -->
+    <update id="decreaseTotalMoney">
         UPDATE orders
-
-        SET 
-        total_money = total_money - #{totalMoney} 
-
-        WHERE 
-        id = #{orderId}
+        SET total_amount = total_amount - #{totalMoney}
+        WHERE id = #{orderId}
     </update>
 
-    <update id="increaseTotalMoney" >
+    <update id="increaseTotalMoney">
         UPDATE orders
-
-        SET 
-        total_money = total_money + #{totalMoney} 
-
-        WHERE 
-        id = #{orderId}
-
+        SET total_amount = total_amount + #{totalMoney}
+        WHERE id = #{orderId}
     </update>
 
-    <update id="updateOrder" parameterType="com.example.order_service.models.Order" >
-        UPDATE 
-        orders
-
+    <update id="updateOrder"
+            parameterType="com.example.order_service.models.Order">
+        UPDATE orders
         SET
-        user_id = #{userId}
-        ,full_name = #{fullName}
-        ,email = #{email}
-        ,phone = #{phone}
-        ,address = #{address}
-        ,total_money = #{totalMoney}
-
-        WHERE 
-        id = #{id}
+            user_id = #{userId},
+            full_name = #{fullName},
+            phone = #{phone},
+            shipping_address = #{shippingAddress},
+            payment_method = #{paymentMethod},
+            total_amount = #{totalAmount},
+            note = #{note}
+        WHERE id = #{id}
     </update>
 
     <update id="updateStatus">
-        UPDATE 
-        orders
-
+        UPDATE orders
         SET status = #{status}
-        
         WHERE id = #{id}
     </update>
 

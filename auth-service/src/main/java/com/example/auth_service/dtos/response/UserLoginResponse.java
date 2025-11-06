@@ -23,19 +23,25 @@ public class UserLoginResponse {
     @JsonProperty("last_name")
     private String lastName;
 
+    @JsonProperty("email")
     private String email;
     
     @JsonProperty("date_of_birth")
     private LocalDate dateOfBirth;
 
+    @JsonProperty("gender")
     private String gender;
 
+    @JsonProperty("address")
     private String address;
 
+    @JsonProperty("phone")
     private String phone;
 
+    @JsonProperty("pass_word")
     private String passWord;
 
+    @JsonProperty("user_name")
     private String userName;
 
     @JsonProperty("role_id")

@@ -23,7 +23,7 @@
             #{dateOfBirth},
             #{gender},
             #{address},
-            #{phone},
+            #{phoneNumber},
             #{roleId},
             #{password},
             #{userName},
@@ -32,7 +32,7 @@
         )
     </insert>
 
-    <select id="getUserById" parameterType="int" resultType="com.example.user_service.dtos.response.UserResponse">
+    <select id="getUserById" parameterType="int" resultType="com.example.user_service.dtos.common_dto.UserResponse">
         SELECT
             id,
             first_name AS firstName,
@@ -43,15 +43,13 @@
             address,
             phone,
             role_id AS roleId,
-            created_at AS createdAt,
-            updated_at AS updatedAt,
             password,
             user_name AS userName
         FROM users
         WHERE id = #{id}
     </select>
 
-    <select id="getByUserName" resultType="com.example.user_service.dtos.response.UserLoginResponse">
+    <select id="getByUserName" resultType="com.example.user_service.dtos.common_dto.UserResponse">
         SELECT
             id,
             first_name AS firstName,
@@ -82,7 +80,6 @@
             gender = #{gender},
             address = #{address},
             phone = #{phoneNumber},
-            role_id = #{roleId},
             password = #{password},
             updated_at = NOW()
         WHERE id = #{id}

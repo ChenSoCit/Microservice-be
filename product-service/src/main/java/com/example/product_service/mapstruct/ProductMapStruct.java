@@ -7,5 +7,6 @@ import com.example.product_service.models.Product;
 
 @Mapper(componentModel = "spring")
 public interface ProductMapStruct{
+
     Product toProduct(ProductRequest request);
 }

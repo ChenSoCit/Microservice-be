@@ -33,7 +33,7 @@ public class User {
 
     private LocalDate updatedAt;
 
-    private String phone;
+    private String phoneNumber;
 
     private Integer roleId;
 

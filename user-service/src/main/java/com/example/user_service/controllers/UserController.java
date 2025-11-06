@@ -1,22 +1,21 @@
 package com.example.user_service.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.user_service.dtos.request.UserRequest;
-import com.example.user_service.dtos.response.ApiResponse;
-import com.example.user_service.dtos.response.UserResponse;
-import com.example.user_service.dtos.response.UserWithOrderResponse;
+import com.example.user_service.dtos.common_dto.UserResponse;
+import com.example.user_service.dtos.common_dto.UserWithOrderResponse;
 import com.example.user_service.services.UserService;
 
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -29,57 +28,46 @@ public class UserController {
     private UserService userService;
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable int id) {
+    public UserResponse getUserById(@PathVariable int id) {
         log.info("Received request to get user by ID: {}", id);
-
-        UserResponse user = userService.getUserById(id);
-        ApiResponse<UserResponse> response = ApiResponse.<UserResponse>builder()
-            .code(HttpStatus.OK.value())
-            .message("get user detail by id")    
-            .data(user)
-            .build();
-        return ResponseEntity.ok(response);
+        return userService.getUserById(id);
     }
+
+    @PostMapping("")
+    public UserResponse createUser(@Valid @RequestBody UserRequest request) {
+        log.info("Received request to create user: {}", request);
+        return userService.createUser(request);
+    }
+
+    @GetMapping("/by-username/{userName}")
+    public UserResponse getUserByName(@PathVariable String userName) {
+        log.info("Received request to get user by username: {}", userName);
+        return userService.getByUserName(userName);
+    }
+
+    @GetMapping("/check-role/{userId}")
+    public String checkRole(@PathVariable int userId) {
+        log.info("Received request to check role by user ID: {}", userId);
+        return userService.checkRole(userId);
+    }   
 
     @GetMapping("/{userId}/orders")
-    public ResponseEntity<ApiResponse<UserWithOrderResponse>> getUserWithOrder(@PathVariable("userId") int userId){
-        UserWithOrderResponse res1 = userService.getUserWithOrder(userId);
-        ApiResponse<UserWithOrderResponse> response = ApiResponse.<UserWithOrderResponse>builder()
-            .code(HttpStatus.OK.value())
-            .message("Get user with order by userId "+ userId)
-            .data(res1)
-            .build();
-        return ResponseEntity.ok(response);
+    public UserWithOrderResponse getUserWithOrder(@PathVariable("userId") int userId){
+        log.info("Received request to get orders by user ID: {}", userId);
+        return userService.getUserWithOrder(userId);
     }
 
-
-
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable int id) {
+    public String deleteUser(@PathVariable int id) {
         log.info("Received request to delete user by ID: {}", id);
         userService.deleteUser(id);
-
-        ApiResponse<String> response = ApiResponse.<String>builder()
-            .code(HttpStatus.OK.value())
-            .message("delete user by id")
-            .data("Delete user by id: {} successful"+id)
-            .build();
-
-        return ResponseEntity.ok(response);
+        return "deleted user";
     }
 
     @PutMapping("/{userId}")
-    public ResponseEntity<ApiResponse<UserResponse>> updateUser(@PathVariable("userId") int userId
-                                                    , @RequestBody UserRequest request){
+    public UserResponse updateUser(@PathVariable("userId") int userId
+                                 , @RequestBody UserRequest request){
         log.info("Update user for request: {}", request);
-        UserResponse user = userService.updateUser(request, userId);
-
-        ApiResponse<UserResponse> response = ApiResponse.<UserResponse>builder()
-            .code(HttpStatus.OK.value())
-            .message("Update user with id: "+userId)
-            .data(user)
-            .build();
-
-        return ResponseEntity.ok(response);
+        return userService.updateUser(request, userId);
     }
 }

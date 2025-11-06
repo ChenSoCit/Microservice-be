@@ -1,5 +1,8 @@
 package com.example.order_service.dtos.request;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -7,14 +10,19 @@ import lombok.Setter;
 @Setter
 @Builder
 public class OrderRequest {
-
-    private Integer userId;
+    private int userId;
 
     private String fullName;
 
-    private String email;
-
     private String phone;
 
-    private String address;
+    private String shippingAddress;
+
+    private String paymentMethod;
+
+    private String note;
+
+    private BigDecimal totalAmount;
+
+    private List<OrderItemDetail> items; 
 }

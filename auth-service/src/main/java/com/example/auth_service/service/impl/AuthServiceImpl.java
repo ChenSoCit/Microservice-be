@@ -4,17 +4,17 @@ package com.example.auth_service.service.impl;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.example.auth_service.exception.BadRequestException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.auth_service.client.UserClient;
 import com.example.auth_service.components.JwtTokenUtil;
-import com.example.auth_service.dtos.request.LoginRequest;
+import com.example.auth_service.dtos.common.LoginRequest;
 import com.example.auth_service.dtos.request.RefreshTokenRequest;
-import com.example.auth_service.dtos.request.UserRegisterRequest;
-import com.example.auth_service.dtos.response.JwtTokenResponse;
-import com.example.auth_service.dtos.response.UserLoginResponse;
-import com.example.auth_service.dtos.response.UserResponse;
+import com.example.auth_service.dtos.common.UserRegisterRequest;
+import com.example.auth_service.dtos.common.JwtTokenResponse;
+import com.example.auth_service.dtos.common.UserResponse;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.service.AuthService;
 
@@ -31,9 +31,9 @@ public class AuthServiceImpl implements AuthService{
 
     @Override
     public JwtTokenResponse login(LoginRequest request) {
-        UserLoginResponse user = userClient.getByUserName(request.getUserName());
+        UserResponse user = userClient.getByUserName(request.getUserName());
 
-        if(user == null || !passwordEncoder.matches(request.getPassword(), user.getPassWord())){
+        if(user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())){
             throw new com.example.auth_service.exception.BadRequestException("Invalid username or password");
         }
 
@@ -73,10 +73,7 @@ public class AuthServiceImpl implements AuthService{
             .password(encodePassword)
             .userName(request.getUserName())
         .build();
-
-        
-        UserResponse response = userClient.create(req);
-        return response;
+        return userClient.create(req);
     }
 
     @Override
@@ -84,13 +81,12 @@ public class AuthServiceImpl implements AuthService{
         String Token = request.getRefreshToken();
         
         if(!jwtTokenUtil.validateToken(Token)){
-            throw new com.example.auth_service.exception.BadRequestException("Invalid refresh token");
+            throw new BadRequestException("Invalid refresh token");
         }
 
         String username = jwtTokenUtil.getUsernameFromToken(Token);
         log.info("username: {}", username);
-        UserLoginResponse user = userClient.getByUserName(username);
-        
+        UserResponse user = userClient.getByUserName(username);
 
         if(user == null){
             throw new ResourceNotFoundException("User not found");
@@ -104,11 +100,10 @@ public class AuthServiceImpl implements AuthService{
         String newRefreshToken = jwtTokenUtil.generateRefreshToken(username);
 
         return JwtTokenResponse.builder()
-        .accessToken(newAccessToken)
-        .refreshToken(newRefreshToken)
-        .tokenType("Bearer")
-        .exporationTime(jwtTokenUtil.getAccessTokenExpiryDate())
-        .build();
+            .accessToken(newAccessToken)
+            .refreshToken(newRefreshToken)
+            .tokenType("Bearer")
+            .exporationTime(jwtTokenUtil.getAccessTokenExpiryDate())
+            .build();
     }
-
 }

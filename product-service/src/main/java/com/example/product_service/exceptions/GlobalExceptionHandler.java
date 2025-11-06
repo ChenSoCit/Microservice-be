@@ -1,6 +1,6 @@
 package com.example.product_service.exceptions;
 
-import java.time.LocalDateTime;
+
 import java.time.OffsetDateTime;
 
 import org.springframework.http.HttpStatus;
@@ -60,5 +60,32 @@ public class GlobalExceptionHandler {
                 .path(request.getRequestURI())
                 .build();
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    // 2. Bad Request
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex, HttpServletRequest request) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(OffsetDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    // 3. Database Operation Error (500 Internal Server Error)
+    @ExceptionHandler(DatabaseOperationException.class)
+    public ResponseEntity<ErrorResponse> handleDatabaseOperation(DatabaseOperationException ex, HttpServletRequest request) {
+        log.error("Database operation failed: {}", ex.getMessage(), ex);
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(OffsetDateTime.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Database Operation Failed")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 }

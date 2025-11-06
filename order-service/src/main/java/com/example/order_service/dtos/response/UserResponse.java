@@ -17,13 +17,13 @@ public class UserResponse {
 
     @JsonProperty("first_name")
     private String firstName;
-    
+
     @JsonProperty("last_name")
     private String lastName;
 
     @JsonProperty("email")
     private String email;
-    
+
     @JsonProperty("date_of_birth")
     private LocalDate dateOfBirth;
 
@@ -35,8 +35,14 @@ public class UserResponse {
 
     @JsonProperty("phone")
     private String phone;
-    
+
     @JsonProperty("role_id")
     private Integer roleId;
+
+    @JsonProperty("user_name")
+    private String userName;
+
+    @JsonProperty("password")
+    private String password;
     
 }

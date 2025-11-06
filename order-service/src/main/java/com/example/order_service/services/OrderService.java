@@ -35,7 +35,7 @@ public interface OrderService {
 
     OrderStatisticsResponse getWeeklyStatics(OrderStatisticsRequest request);
 
-    OrderStatisticsResponse getMonthlyStatics(OrderStatisticsRequest request);
+    OrderStatisticsResponse getUpdatedStatics(String type, Integer month, Integer week);
 
     OrderStatisticsResponse getWeek(OrderStatisticsRequest request);
     

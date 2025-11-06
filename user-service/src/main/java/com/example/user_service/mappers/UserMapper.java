@@ -2,7 +2,7 @@ package com.example.user_service.mappers;
 
 import java.util.List;
 
-import com.example.user_service.dtos.response.UserResponse;
+import com.example.user_service.dtos.common_dto.UserResponse;
 import com.example.user_service.models.User;
 
 

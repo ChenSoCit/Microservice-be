@@ -19,19 +19,19 @@ import com.example.client_server.dto.response.ProductResponse;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/v1/products")
+@RequestMapping("/api/v1/client/products")
 @RequiredArgsConstructor
 public class ProductProxyController {
     private final ProductClient productClient;
 
     @PostMapping("/insert")
     @PreAuthorize("hasAnyRole('ADMIN')")
-    public ApiResponse<String> insertProduct(@RequestBody ProductRequest request){
-        String response = productClient.createProduct(request);
+    public ApiResponse<Integer> insertProduct(@RequestBody ProductRequest request){
+        Integer result = productClient.createProduct(request);
 
-        return ApiResponse.<String>builder()
+        return ApiResponse.<Integer>builder()
                 .code(200)
-                .data(response)
+                .data(result)
                 .message("Product created successfully")
                 .build();
     }

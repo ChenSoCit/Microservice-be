@@ -45,10 +45,11 @@ public interface OrderClient {
                                                 @RequestParam(required = false) Integer month,
                                                 @RequestParam(required = false) Integer year);
 
-    @GetMapping("/month/statics")
-    OrderStatisticsWeeklyResponse getStatisticsMonthly(
+    @GetMapping("/update/statics")
+    OrderStatisticsWeeklyResponse getStatisticsUpdate(
+            @RequestParam(required = false) String type,
             @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year);
+            @RequestParam(required = false) Integer week);
 
     @PostMapping("/statistics")
     ResponseStatistic getStatistics(@RequestBody OrderStatisticsRequest request);

@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v1/client/auth")
 @RequiredArgsConstructor
 @Slf4j(topic = "AUTH-CONTROLLER")
 public class AuthProxyController {
@@ -44,10 +44,10 @@ public class AuthProxyController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<JwtTokenResponse> login(@RequestBody LoginRequest request){ 
-        // dang nhap user
+    public ApiResponse<JwtTokenResponse> login(@RequestBody LoginRequest request){
+        log.info("Login request: {}", request.getUserName());
+
         JwtTokenResponse jwtTokenResponse = authClient.login(request);
-        
         return ApiResponse.<JwtTokenResponse>builder()
                 .code(HttpStatus.SC_OK)
                 .data(jwtTokenResponse)

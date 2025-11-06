@@ -21,11 +21,11 @@ public interface UserClient {
     UserResponse findByName(@PathVariable("username") String username);
 
     @GetMapping("/{userId}/orders")
-    ApiResponse<UserWithOrderResponse> getUserOrders(@PathVariable("userId") long userId);
+    UserWithOrderResponse getUserOrders(@PathVariable("userId") long userId);
 
     @DeleteMapping("/{id}")
     String deleteUser(@PathVariable("id") long id);
 
     @PutMapping("/{id}")
-    ApiResponse<UserResponse> updateUser(@PathVariable("id") long id, @RequestBody UserRequest request);
+    UserResponse updateUser(@PathVariable("id") long id, @RequestBody UserRequest request);
 }

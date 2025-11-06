@@ -1,4 +1,4 @@
-package com.example.auth_service.dtos.request;
+package com.example.auth_service.dtos.common;
 
 import lombok.Builder;
 import lombok.Data;

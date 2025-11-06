@@ -3,7 +3,6 @@ package com.example.auth_service.controller;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,12 +13,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.auth_service.components.JwtTokenUtil;
-import com.example.auth_service.dtos.request.LoginRequest;
+import com.example.auth_service.dtos.common.LoginRequest;
 import com.example.auth_service.dtos.request.RefreshTokenRequest;
-import com.example.auth_service.dtos.request.UserRegisterRequest;
-import com.example.auth_service.dtos.response.JwtTokenResponse;
-import com.example.auth_service.dtos.response.UserResponse;
-import com.example.auth_service.dtos.response.VerifyTokenResponse;
+import com.example.auth_service.dtos.common.UserRegisterRequest;
+import com.example.auth_service.dtos.common.JwtTokenResponse;
+import com.example.auth_service.dtos.common.UserResponse;
+import com.example.auth_service.dtos.common.VerifyTokenResponse;
 import com.example.auth_service.service.AuthService;
 
 import io.jsonwebtoken.Claims;
@@ -38,28 +37,25 @@ public class AuthController {
 
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(@Valid @RequestBody UserRegisterRequest request) {
-        UserResponse user = authService.register(request);
-
-        return ResponseEntity.status(HttpStatusCode.valueOf(201)).body(user);
+    public UserResponse register(@Valid @RequestBody UserRegisterRequest request) {
+        log.info("Registering User: {}", request.getUserName());
+        return  authService.register(request);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<JwtTokenResponse> login(@Valid @RequestBody LoginRequest request){
-        JwtTokenResponse result = authService.login(request);
-
-        return ResponseEntity.status(HttpStatusCode.valueOf(200)).body(result); 
+    public JwtTokenResponse login(@Valid @RequestBody LoginRequest request){
+        log.info("Login User: {}", request.getUserName());
+        return  authService.login(request);
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<JwtTokenResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request){
-        JwtTokenResponse result = authService.refreshToken(request);
+    public JwtTokenResponse refreshToken(@Valid @RequestBody RefreshTokenRequest request){
 
-        return ResponseEntity.status(HttpStatusCode.valueOf(200)).body(result); 
+        return authService.refreshToken(request);
     }
 
     @GetMapping("/verify")
-    public ResponseEntity<VerifyTokenResponse> verifyToken(@RequestHeader("Authorization") String auth) {
+    public VerifyTokenResponse verifyToken(@RequestHeader("Authorization") String auth) {
         boolean isValid = jwtTokenUtil.validateToken(auth);
         if (isValid) {
             Claims claims = jwtTokenUtil.extractAllClaims(auth);
@@ -67,18 +63,15 @@ public class AuthController {
             String username = jwtTokenUtil.getUsernameFromToken(auth);
             Set<String> roles = new HashSet<>();
             roles.add(role);
-            VerifyTokenResponse response = VerifyTokenResponse.builder()
+            return VerifyTokenResponse.builder()
                 .username(username)
                 .roles(roles)
                 .valid(true)
                 .build();
-            return ResponseEntity.ok(response);
         } else {
-            VerifyTokenResponse response = VerifyTokenResponse.builder()
+            return VerifyTokenResponse.builder()
                 .valid(false)
                 .build();
-            return ResponseEntity.ok(response);
         }
     }
-
 }

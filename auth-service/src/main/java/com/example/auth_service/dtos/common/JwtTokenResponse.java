@@ -1,4 +1,4 @@
-package com.example.auth_service.dtos.response;
+package com.example.auth_service.dtos.common;
 
 import java.util.Date;
 

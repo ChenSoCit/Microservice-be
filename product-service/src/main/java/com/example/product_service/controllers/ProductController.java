@@ -1,8 +1,5 @@
 package com.example.product_service.controllers;
 
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,10 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.product_service.dtos.common_dto.ProductResponse;
 import com.example.product_service.dtos.request.ProductRequest;
-import com.example.product_service.dtos.response.ApiResponse;
 import com.example.product_service.dtos.response.ProductPageResponse;
-import com.example.product_service.dtos.response.ProductResponse;
 import com.example.product_service.services.ProductService;
 
 import jakarta.validation.Valid;
@@ -30,76 +26,65 @@ import lombok.extern.slf4j.Slf4j;
 public class ProductController {
     
     private final ProductService productService;
-    
 
     @PostMapping("/insert")
-    public ResponseEntity<String> insertProduct(@Valid @RequestBody ProductRequest request){
+    public Integer insertProduct(@Valid @RequestBody ProductRequest request){
         log.info("Request to insert product");
-        
-        productService.insertProduct(request);
-        return ResponseEntity.ok("Create product successfully");
+        return productService.insertProduct(request);
     }
-
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponse> getProductById(@PathVariable("id") int id) {
+    public ProductResponse getProductById(@PathVariable("id") int id){
         log.info("Request to get product by ID: {}", id);
-
-        ProductResponse product = productService.getProductById(id);
-        return ResponseEntity.ok(product);
+        return productService.getProductById(id);
     }
-    
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductResponse> upDateProduct(@PathVariable("id") Integer id, @RequestBody ProductRequest request) {
-        log.info("Request to update product");
-
-        ProductResponse product = productService.upDateProduct(id, request);
-        return ResponseEntity.ok(product);
+    public ProductResponse upDateProduct(@PathVariable("id") Integer id
+                                        ,@Valid @RequestBody ProductRequest request){
+        log.info("Request to update product, {}", id);
+        return productService.upDateProduct(id, request);
     }
 
     @PutMapping("/stock/decrease")
-    public ResponseEntity<String> updateStockDecrease(@RequestParam int productId
-            , @RequestParam int quantity){
+    public String updateStockDecrease(@RequestParam int productId
+                                    , @RequestParam int quantity){
+        log.info("Request to update stock decrease, {}", productId);
         productService.decreaseStockProduct(productId, quantity);
-
-        return ResponseEntity.ok("Decrease stock successfully");
+        return "Decrease stock successfully";
     }
 
     @PutMapping("/stock/increase")
-    public ResponseEntity<String> increaseStockProduct(@RequestParam int productId
-            , @RequestParam int quantity){
-
+    public String increaseStockProduct(@RequestParam int productId
+                                    , @RequestParam int quantity){
+        log.info("Request to increase stock product, {}", productId);
         productService.increaseStockProduct(productId, quantity);
-        return ResponseEntity.ok("Increase stock successfully");
+        return "Increase stock successfully";
     }
 
    
     @DeleteMapping("/{id}")
-    public ResponseEntity<Integer> deleteProduct(@PathVariable("id") Integer id) {
-
-    int deletedCount = productService.deleteProduct(id);
-    return ResponseEntity.ok(deletedCount);
+    public Integer deleteProduct(@PathVariable("id") Integer id) {
+        log.info("Request to delete product by ID: {}", id);
+        return productService.deleteProduct(id);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<ProductPageResponse> searchProduct(
+    public ProductPageResponse searchProduct(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size){
-
-        ProductPageResponse pageResponse = productService.searchProduct( keyword, page, size);
-        return ResponseEntity.ok(pageResponse);
+        log.info("Request to search product");
+        return productService.searchProduct( keyword, page, size);
     }
 
 
     @GetMapping("/sort")
-    public ResponseEntity<ProductPageResponse> findByPrice(
+    public ProductPageResponse findByPrice(
             @RequestParam(required = false) String sort,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size){
-        ProductPageResponse pageResponse = productService.findByPrice(sort, page, size);
-        return ResponseEntity.ok(pageResponse);
+        log.info("Request to sort product");
+        return productService.findByPrice(sort, page, size);
     }
-         
 }

@@ -9,11 +9,11 @@ import org.springframework.stereotype.Service;
 
 import com.example.auth_service.client.UserClient;
 import com.example.auth_service.components.JwtTokenUtil;
-import com.example.auth_service.dtos.request.LoginRequest;
+import com.example.auth_service.dtos.common.LoginRequest;
 import com.example.auth_service.dtos.request.RefreshTokenRequest;
-import com.example.auth_service.dtos.request.UserRegisterRequest;
-import com.example.auth_service.dtos.response.JwtTokenResponse;
-import com.example.auth_service.dtos.response.UserResponse;
+import com.example.auth_service.dtos.common.UserRegisterRequest;
+import com.example.auth_service.dtos.common.JwtTokenResponse;
+import com.example.auth_service.dtos.common.UserResponse;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.service.AuthService;
 

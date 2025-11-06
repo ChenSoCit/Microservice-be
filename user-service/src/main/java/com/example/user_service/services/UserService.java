@@ -1,8 +1,8 @@
 package com.example.user_service.services;
 
 import com.example.user_service.dtos.request.UserRequest;
-import com.example.user_service.dtos.response.UserResponse;
-import com.example.user_service.dtos.response.UserWithOrderResponse;
+import com.example.user_service.dtos.common_dto.UserResponse;
+import com.example.user_service.dtos.common_dto.UserWithOrderResponse;
 
 
 public interface UserService {

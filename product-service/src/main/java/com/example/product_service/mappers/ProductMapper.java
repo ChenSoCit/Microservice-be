@@ -3,7 +3,7 @@ package com.example.product_service.mappers;
 
 import java.util.List;
 
-import com.example.product_service.dtos.response.ProductResponse;
+import com.example.product_service.dtos.common_dto.ProductResponse;
 import com.example.product_service.models.Product;
 
 import feign.Param;

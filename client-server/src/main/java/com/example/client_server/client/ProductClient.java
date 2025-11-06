@@ -17,7 +17,7 @@ import com.example.client_server.dto.response.ProductResponse;
 @FeignClient(name = "product-service",  path = "/api/v1/products")
 public interface ProductClient {
     @PostMapping("/insert")
-    String createProduct(@RequestBody ProductRequest request);
+    Integer createProduct(@RequestBody ProductRequest request);
     
     @GetMapping("/{id}")
     ProductResponse getProduct(@PathVariable("id")long id);

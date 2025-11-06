@@ -1,7 +1,8 @@
-package com.example.user_service.dtos.response;
+package com.example.user_service.dtos.common_dto;
 
 import java.util.List;
 
+import com.example.user_service.dtos.response.OrderResponse;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;

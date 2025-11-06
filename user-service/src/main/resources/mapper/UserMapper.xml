@@ -32,7 +32,7 @@
         )
     </insert>
 
-    <select id="getUserById" parameterType="int" resultType="com.example.user_service.dtos.response.UserResponse">
+    <select id="getUserById" parameterType="int" resultType="com.example.user_service.dtos.common_dto.UserResponse">
         SELECT
             id,
             first_name AS firstName,
@@ -49,7 +49,7 @@
         WHERE id = #{id}
     </select>
 
-    <select id="getByUserName" resultType="com.example.user_service.dtos.response.UserResponse">
+    <select id="getByUserName" resultType="com.example.user_service.dtos.common_dto.UserResponse">
         SELECT
             id,
             first_name AS firstName,
@@ -80,7 +80,6 @@
             gender = #{gender},
             address = #{address},
             phone = #{phoneNumber},
-            role_id = #{roleId},
             password = #{password},
             updated_at = NOW()
         WHERE id = #{id}

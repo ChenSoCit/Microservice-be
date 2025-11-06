@@ -36,7 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 
 
 @RestController
-@RequestMapping("/api/v1/orders")
+@RequestMapping("/api/v1/client/orders")
 @RequiredArgsConstructor
 @Slf4j(topic = "ORDER-CONTROLLER")
 public class OrderProxyController {
@@ -100,7 +100,6 @@ public class OrderProxyController {
         // Kiem tra product
         List<OrderItemRequest> items = orderRequest.getItems();
         List<OrderItemDetail> orderItemDetails = new ArrayList<>();
-
         for (OrderItemRequest item : items) {
             // Lay thong tin product tu Product Service
             ProductResponse product = productClient.getProduct(item.getProductId());
@@ -156,7 +155,7 @@ public class OrderProxyController {
         }
 
         return ApiResponse.<OrderResponse>builder()
-                .code(201)
+                .code(200)
                 .message("Order created successfully")
                 .data(orderResponse)
                 .build();
@@ -249,13 +248,13 @@ public class OrderProxyController {
                 .build();
     }
 
-    @GetMapping("/month/statics")
+    @GetMapping("/update/statics")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Object> getOrderStatisticMonth(
+    public ApiResponse<Object> getOrderStatisticUpdate(
+            @RequestParam(required = false) String type,
             @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year){
-
-        OrderStatisticsWeeklyResponse result = orderClient.getStatisticsMonthly(month, year);
+            @RequestParam(required = false) Integer week){
+        OrderStatisticsWeeklyResponse result = orderClient.getStatisticsUpdate(type,month, week);
         return ApiResponse.builder()
                 .code(200)
                 .message("get order statistic week")

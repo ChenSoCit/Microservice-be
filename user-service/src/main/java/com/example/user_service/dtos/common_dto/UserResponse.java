@@ -1,4 +1,4 @@
-package com.example.user_service.dtos.response;
+package com.example.user_service.dtos.common_dto;
 
 import java.time.LocalDate;
 

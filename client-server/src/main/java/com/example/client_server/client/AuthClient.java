@@ -19,7 +19,7 @@ public interface AuthClient {
     VerifyTokenResponse  verifyToken(@RequestHeader("Authorization") String token);
 
     @PostMapping("/register")
-    UserResponse register(@RequestBody UserRegisterRequest userRequest);
+    UserResponse register(@RequestBody UserRegisterRequest request);
 
     @PostMapping("/login")
     JwtTokenResponse login(@RequestBody LoginRequest request);

@@ -1,5 +1,6 @@
 package com.example.client_server.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 
@@ -10,5 +11,6 @@ import java.util.List;
 public class OrderStatisticsWeeklyResponse {
     private String type;
     private BigDecimal totalAmount;
-    private List<WeeklyStatsResponse> details;
+    private Integer totalOrders;
+    private List<Object> details;
 }

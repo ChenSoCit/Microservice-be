@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import com.example.user_service.dtos.response.OrderResponse;
 
-@FeignClient(name = "order-service", path = "/api/internal/orders")
+@FeignClient(name = "order-service", path = "/api/v1/orders")
 public interface OrderClient {
 
     @DeleteMapping("/user/{userId}")

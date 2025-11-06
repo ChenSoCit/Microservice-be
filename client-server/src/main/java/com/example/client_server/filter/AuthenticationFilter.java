@@ -30,11 +30,11 @@ public class AuthenticationFilter extends OncePerRequestFilter {
     private AuthClient authClient;
 
     private static final Set<EndpointMethodPattern> BYPASS_PATTERNS = Set.of(
-        new EndpointMethodPattern("/api/v1/auth/register", "POST"),
-        new EndpointMethodPattern("/api/v1/auth/login", "POST"),
-        new EndpointMethodPattern("/api/v1/auth/verify", "GET"),
-        new EndpointMethodPattern("/api/v1/products", "GET"),
-        new EndpointMethodPattern("/api/v1/products/*", "GET") 
+        new EndpointMethodPattern("/api/v1/client/auth/register", "POST"),
+        new EndpointMethodPattern("/api/v1/client/auth/login", "POST"),
+        new EndpointMethodPattern("/api/v1/client/auth/verify", "GET"),
+        new EndpointMethodPattern("/api/v1/client/products", "GET"),
+        new EndpointMethodPattern("/api/v1/client/products/*", "GET")
     );
 
     private static class EndpointMethodPattern {

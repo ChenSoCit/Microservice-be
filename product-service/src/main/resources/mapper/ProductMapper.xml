@@ -81,7 +81,7 @@
     id = #{productId} 
   </update>
 
-  <select id="getProductById" resultType="com.example.product_service.dtos.response.ProductResponse" parameterType="int">
+  <select id="getProductById" resultType="com.example.product_service.dtos.common_dto.ProductResponse" parameterType="int">
     select
     id
     , name_product AS nameProduct

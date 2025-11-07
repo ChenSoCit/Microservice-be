@@ -1,9 +1,9 @@
 package com.example.client_server.dto.request;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import com.example.client_server.dto.OrderItemDetail;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

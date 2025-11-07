@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.order_service.commons.OrderStatus;
 import com.example.order_service.dtos.request.OrderRequest;
+import com.example.order_service.dtos.request.OrderStatisRequestUp;
 import com.example.order_service.dtos.request.OrderStatisticsRequest;
 import com.example.order_service.dtos.response.CntOrderResponse;
 import com.example.order_service.dtos.response.DailyStatsResponse;
@@ -389,7 +390,10 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderStatisticsResponse getUpdatedStatics(String type, Integer month, Integer week) {
+    public OrderStatisticsResponse getUpdatedStatics(OrderStatisRequestUp request) {
+        String type = request.getType();
+        Integer month = request.getMonth();
+        Integer week = request.getWeek();
         int year = LocalDate.now().getYear();
 
         //  Xác định ngày đầu và cuối tháng
@@ -397,17 +401,17 @@ public class OrderServiceImpl implements OrderService {
         LocalDate lastDay = firstDay.withDayOfMonth(firstDay.lengthOfMonth());
 
         //  Type=W: Thống kê theo NGÀY trong tuần cụ thể (DailyStatsResponse)
-        if ("W".equalsIgnoreCase(type) && week != null) {
+        if ("W".equalsIgnoreCase(type) && week != 0) {
             log.info("Getting daily statistics for week {} of month {}", week, month);
-            
+
             // Tính ngày bắt đầu và kết thúc của tuần đó
             int daysInMonth = lastDay.getDayOfMonth();
             int startDay = (week - 1) * 7 + 1;
             int endDay = Math.min(startDay + 6, daysInMonth);
-            
+
             LocalDate weekStartDate = LocalDate.of(year, month, startDay);
             LocalDate weekEndDate = LocalDate.of(year, month, endDay);
-            
+
             // Gọi method getWeek để lấy thống kê theo ngày
             OrderStatisticsRequest weekRequest = OrderStatisticsRequest.builder()
                     .startDate(weekStartDate)

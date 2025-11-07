@@ -8,7 +8,6 @@ import lombok.Setter;
 @Setter
 @Builder
 public class OrderRequest {
-    private Integer userId;
 
     private String fullName;
 

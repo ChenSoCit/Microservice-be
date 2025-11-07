@@ -4,8 +4,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.example.client_server.dto.request.OrderStatisticsRequest;
-import com.example.client_server.dto.response.*;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,6 +24,16 @@ import com.example.client_server.dto.OrderItemDetail;
 import com.example.client_server.dto.request.MapOrderRequest;
 import com.example.client_server.dto.request.OrderItemRequest;
 import com.example.client_server.dto.request.OrderRequest;
+import com.example.client_server.dto.request.OrderStatisRequestUp;
+import com.example.client_server.dto.request.OrderStatisticsRequest;
+import com.example.client_server.dto.response.CntOrderResponse;
+import com.example.client_server.dto.response.OrderItemResponse;
+import com.example.client_server.dto.response.OrderResponse;
+import com.example.client_server.dto.response.OrderStatisticsResponse;
+import com.example.client_server.dto.response.OrderStatisticsWeeklyResponse;
+import com.example.client_server.dto.response.ProductResponse;
+import com.example.client_server.dto.response.ResponseStatistic;
+import com.example.client_server.dto.response.UserResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -123,7 +131,7 @@ public class OrderProxyController {
 
         // Tao OrderRequest de gui sang Order Service
         MapOrderRequest mapOrderRequest = MapOrderRequest.builder()
-                .userId(orderRequest.getUserId())
+                .userId(userResponse.getId())
                 .fullName(orderRequest.getFullName())
                 .phone(orderRequest.getPhone())
                 .shippingAddress(orderRequest.getShippingAddress())
@@ -245,13 +253,10 @@ public class OrderProxyController {
                 .build();
     }
 
-    @GetMapping("/update/statics")
+    @PostMapping("/update/statics")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Object> getOrderStatisticUpdate(
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer week){
-        OrderStatisticsWeeklyResponse result = orderClient.getStatisticsUpdate(type,month, week);
+    public ApiResponse<Object> getOrderStatisticUpdate(@RequestBody OrderStatisRequestUp request){
+        OrderStatisticsWeeklyResponse result = orderClient.getStatisticsUpdate(request);
         return ApiResponse.builder()
                 .code(200)
                 .message("get order statistic week")

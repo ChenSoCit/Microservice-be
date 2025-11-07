@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import com.example.order_service.dtos.request.OrderRequest;
+import com.example.order_service.dtos.request.OrderStatisRequestUp;
 import com.example.order_service.dtos.request.OrderStatisticsRequest;
 import com.example.order_service.dtos.response.CntOrderResponse;
 import com.example.order_service.dtos.response.OrderDetailResponse;
@@ -35,7 +36,7 @@ public interface OrderService {
 
     OrderStatisticsResponse getWeeklyStatics(OrderStatisticsRequest request);
 
-    OrderStatisticsResponse getUpdatedStatics(String type, Integer month, Integer week);
+    OrderStatisticsResponse getUpdatedStatics(OrderStatisRequestUp request);
 
     OrderStatisticsResponse getWeek(OrderStatisticsRequest request);
     

@@ -2,7 +2,6 @@ package com.example.client_server.dto.request;
 
 import java.time.LocalDate;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,7 +13,6 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserRegisterRequest {
-   
     private String firstName;
     private String lastName;
     private String email;
